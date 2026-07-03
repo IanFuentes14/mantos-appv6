@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tasa Riego">
+<meta name="theme-color" content="#1e3a5f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon.png">
+<title>Tasa de Riego - MantosGroup</title>
+<script>
+  (function () {
+    try {
+      var savedTheme = localStorage.getItem('mantos_theme');
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      var initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+      if (initialTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    } catch (e) {}
+  })();
+</script>
+<style>
+  :root {
+    --blue-dark:   #1e3a5f;
+    --blue-mid:    #3971b8;
+    --blue-light:  #5b8fd4;
+    --blue-pale:   #eaf0fb;
+    --blue-accent: #7eb3f5;
+    --text-primary:   #0d1f35;
+    --text-secondary: #3a5070;
+    --text-muted:     #7a9abf;
+    --bg:      #f0f5fc;
+    --bg-card: #ffffff;
+    --border:  #c8d9f0;
+    --shadow:  0 2px 12px rgba(30,58,95,0.10);
+    --danger: #c0392b;
+    --danger-bg: #fdf3f2;
+    --danger-border: #e8b4ae;
+    --danger-text: #8a3a32;
+    --success: #278d5c;
+    --input-focus-bg: #ffffff;
+    --header-start: var(--blue-dark);
+    --header-end: var(--blue-mid);
+    color-scheme: light;
+    --radius:    14px;
+    --radius-sm: 8px;
+    --safe-top:    env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+  :root[data-theme="dark"] {
+    --blue-dark:   #07182c;
+    --blue-mid:    #255f9f;
+    --blue-light:  #3f83c5;
+    --blue-pale:   #132a45;
+    --blue-accent: #8dc7ff;
+    --text-primary:   #e8f0fa;
+    --text-secondary: #bdcadb;
+    --text-muted:     #8396ad;
+    --bg:      #07111f;
+    --bg-card: #101c2d;
+    --border:  #263a55;
+    --shadow:  0 8px 26px rgba(0,0,0,0.32);
+    --danger: #f07f73;
+    --danger-bg: #341c20;
+    --danger-border: #7f3b37;
+    --danger-text: #ffc5bf;
+    --success: #55d690;
+    --input-focus-bg: #15243a;
+    --header-start: #061426;
+    --header-end: #164a82;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg); color: var(--text-primary);
+    min-height: 100vh; min-height: -webkit-fill-available;
+    padding-bottom: calc(80px + var(--safe-bottom));
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  /* ── LOGIN ─────────────────────────────────────────────── */
+  #login-screen {
+    min-height: 100vh; min-height: -webkit-fill-available;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: calc(32px + var(--safe-top)) 24px 32px;
+    background: linear-gradient(160deg, var(--header-start) 0%, var(--header-end) 70%, var(--blue-light) 100%);
+  }
+  .login-logo-wrap {
+    width: 180px; margin-bottom: 8px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  }
+  .login-logo-wrap img { width: 100%; height: auto; display: block; }
+  .login-divider {
+    width: 40px; height: 2px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 2px; margin: 16px auto 24px;
+  }
+  .login-app-title {
+    font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.7);
+    letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 28px;
+    text-align: center;
+  }
+  .login-card {
+    background: var(--bg-card); border-radius: 20px; padding: 28px 24px;
+    width: 100%; max-width: 360px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+  }
+  .login-card label {
+    display: block; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.07em;
+    color: var(--text-secondary); margin-bottom: 8px;
+  }
+  .login-card input[type=text] {
+    width: 100%; padding: 14px 16px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 16px;
+    color: var(--text-primary); background: var(--bg);
+    margin-bottom: 16px; -webkit-appearance: none; transition: border-color 0.2s;
+  }
+  .login-card input:focus { outline: none; border-color: var(--blue-mid); background: var(--input-focus-bg); }
+  .login-card input::placeholder { color: var(--text-muted); }
+  .btn-login {
+    width: 100%; padding: 15px; background: var(--blue-mid); color: #fff;
+    border: none; border-radius: var(--radius-sm);
+    font-size: 15px; font-weight: 700; cursor: pointer; -webkit-appearance: none;
+    transition: background 0.2s;
+  }
+  .btn-login:active { background: var(--blue-dark); }
+  .login-hint { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 14px; }
+
+  /* iOS banner */
+  .ios-banner {
+    background: var(--blue-dark); color: #fff; padding: 12px 16px;
+    font-size: 12px; text-align: center; line-height: 1.5; display: none;
+  }
+  .ios-banner span { color: var(--blue-accent); font-weight: 600; }
+
+  /* ── MAIN APP ───────────────────────────────────────────── */
+  #main-app { display: none; }
+  .app-header {
+    background: linear-gradient(135deg, var(--header-start) 0%, var(--header-end) 100%);
+    padding: calc(var(--safe-top) + 14px) 16px 12px;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; }
+  .header-logo { height: 38px; width: auto; display: block; border-radius: 8px; }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .header-subtitle { font-size: 11px; color: rgba(255,255,255,0.55); }
+  .user-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.12); border-radius: 20px;
+    padding: 5px 10px 5px 8px; cursor: pointer; border: none;
+    color: #fff; font-size: 12px; font-weight: 500;
+  }
+  .user-badge:active { background: rgba(255,255,255,0.22); }
+  .user-avatar {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--blue-accent); display: flex; align-items: center;
+    justify-content: center; font-size: 11px; font-weight: 700;
+    color: var(--blue-dark);
+  }
+  .header-actions { display: flex; align-items: center; gap: 8px; }
+  .theme-toggle {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(255,255,255,0.12); color: #fff;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 20px;
+    padding: 6px 10px; font-size: 11px; font-weight: 700;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  .theme-toggle:active { background: rgba(255,255,255,0.22); }
+  .theme-toggle-mark {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: currentColor; opacity: 0.9;
+  }
+  .login-theme-toggle {
+    width: 100%; justify-content: center; margin-top: 14px;
+    background: var(--blue-pale); color: var(--blue-mid);
+    border-color: var(--border);
+  }
+
+  .tabs {
+    display: flex; background: var(--blue-dark);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .tab {
+    flex: 1; padding: 12px; background: none; border: none;
+    font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5);
+    cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .tab.active { color: var(--blue-accent); border-bottom-color: var(--blue-accent); }
+
+  .content { padding: 16px; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── CARDS ──────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+  .card-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 12px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-row.single { grid-template-columns: 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  label { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+  input[type=text], input[type=number] {
+    padding: 11px 12px; border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 16px;
+    color: var(--text-primary); background: var(--bg); width: 100%;
+    transition: border-color 0.2s; -webkit-appearance: none;
+  }
+  input:focus { outline: none; border-color: var(--blue-mid); background: var(--input-focus-bg); }
+  input::placeholder { color: var(--text-muted); }
+
+  .points-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .vol-result {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);
+  }
+  .vol-result span { font-size: 12px; color: var(--text-muted); }
+  .vol-result strong { font-size: 16px; font-weight: 600; color: var(--blue-mid); }
+
+  /* ── TASA CARD ──────────────────────────────────────────── */
+  .tasa-card {
+    background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+    border-radius: var(--radius); padding: 20px; margin-bottom: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tasa-label { font-size: 11px; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .tasa-value { font-size: 36px; font-weight: 700; color: #fff; line-height: 1; }
+  .tasa-unit { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+  .tasa-formula { font-size: 10px; color: rgba(255,255,255,0.4); margin-top: 4px; }
+  .tasa-icon { font-size: 20px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.4; color: #fff; }
+
+  /* ── BUTTONS ────────────────────────────────────────────── */
+  .btn-save {
+    width: 100%; padding: 14px; background: var(--blue-mid); color: #fff;
+    border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-bottom: 8px; -webkit-appearance: none; transition: background 0.2s;
+  }
+  .btn-save:active { background: var(--blue-dark); }
+  .btn-secondary {
+    width: 100%; padding: 12px; background: none; color: var(--text-secondary);
+    border: 1.5px solid var(--border); border-radius: var(--radius);
+    font-size: 13px; cursor: pointer; -webkit-appearance: none;
+  }
+  .btn-secondary:active { background: var(--blue-pale); }
+  .btn-danger-outline {
+    width: 100%; padding: 12px; background: none; color: var(--danger);
+    border: 1.5px solid var(--danger-border); border-radius: var(--radius);
+    font-size: 13px; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+    margin-bottom: 8px;
+  }
+  .btn-danger-outline:active { background: var(--danger-bg); }
+  .btn-danger-fill { background: var(--danger); color: #fff; border: none; }
+
+  /* ── STATS ──────────────────────────────────────────────── */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat-box {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 10px; text-align: center; box-shadow: var(--shadow);
+  }
+  .stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stat-num { font-size: 18px; font-weight: 700; color: var(--blue-mid); margin-top: 2px; }
+
+  /* ── RECORDS ────────────────────────────────────────────── */
+  .record-item {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; box-shadow: var(--shadow);
+  }
+  .rec-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+  .rec-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+  .rec-date { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .rec-operator { font-size: 11px; color: var(--blue-mid); margin-top: 1px; font-weight: 500; }
+  .rec-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+  .chip { font-size: 11px; padding: 3px 8px; background: var(--blue-pale); color: var(--blue-mid); border-radius: 20px; font-weight: 500; }
+  .rec-observacion {
+    margin-top: 8px; padding: 8px 10px; background: var(--danger-bg);
+    border-left: 3px solid var(--danger); border-radius: 6px;
+    font-size: 12px; color: var(--danger-text);
+  }
+  .rec-tasa { display: flex; align-items: baseline; gap: 4px; }
+  .rec-tasa .big { font-size: 22px; font-weight: 700; color: var(--blue-mid); }
+  .rec-tasa .unit { font-size: 12px; color: var(--text-muted); }
+  .btn-del { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .btn-del:active { color: var(--danger); }
+
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
+  .empty p { font-size: 14px; }
+
+  /* ── TOAST ──────────────────────────────────────────────── */
+  .toast {
+    position: fixed; bottom: calc(90px + var(--safe-bottom)); left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background: var(--blue-dark); color: #fff; padding: 10px 20px;
+    border-radius: 30px; font-size: 13px; font-weight: 500;
+    opacity: 0; transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none; white-space: nowrap; z-index: 100;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── WHATSAPP BTN ───────────────────────────────────────── */
+  .btn-whatsapp {
+    width: 100%; padding: 14px; background: #25D366; color: #fff;
+    border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; margin-bottom: 14px;
+    box-shadow: 0 4px 15px rgba(37,211,102,0.35); -webkit-appearance: none;
+  }
+  .btn-whatsapp:active { background: #1da851; }
+
+  /* ── MODAL ──────────────────────────────────────────────── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 50; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--bg-card); border-radius: 20px 20px 0 0; padding: 24px 20px calc(40px + var(--safe-bottom)); width: 100%; max-width: 480px; }
+  .modal-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: var(--text-primary); }
+  .modal-box input[type=text] { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 16px; color: var(--text-primary); background: var(--bg); margin-bottom: 12px; -webkit-appearance: none; }
+  .modal-box input:focus { outline: none; border-color: var(--blue-mid); background: var(--input-focus-bg); }
+  .modal-btns { display: flex; gap: 10px; }
+  .modal-btns button { flex: 1; padding: 12px; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; -webkit-appearance: none; }
+  .btn-modal-ok { background: var(--blue-mid); color: #fff; border: none; }
+  .btn-modal-cancel { background: none; color: var(--text-secondary); border: 1.5px solid var(--border); }
+
+  /* ── MENU PRINCIPAL ─────────────────────────────────────── */
+  #menu-screen {
+    display: none;
+    min-height: 100vh; min-height: -webkit-fill-available;
+    background: var(--bg);
+    padding-bottom: calc(24px + var(--safe-bottom));
+  }
+  .menu-header {
+    background: linear-gradient(135deg, var(--header-start) 0%, var(--header-end) 100%);
+    padding: calc(var(--safe-top) + 14px) 16px 20px;
+  }
+  .menu-header .header-top { display: flex; justify-content: space-between; align-items: center; }
+  .menu-welcome { color: #fff; font-size: 15px; font-weight: 600; margin-top: 14px; }
+  .menu-welcome-sub { color: rgba(255,255,255,0.65); font-size: 12px; margin-top: 2px; }
+  .menu-options { padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+  .menu-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 18px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 16px; cursor: pointer;
+    text-align: left; width: 100%; -webkit-appearance: none;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .menu-card:active { transform: scale(0.98); background: var(--blue-pale); }
+  .menu-card-icon {
+    width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    font-weight: 800; letter-spacing: 0.06em; color: #fff;
+    background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+  }
+  .menu-card-icon.alt { background: linear-gradient(135deg, #2c7a4b, #3fa06a); }
+  .menu-card-text { flex: 1; }
+  .menu-card-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 3px; }
+  .menu-card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+  .menu-card-arrow { font-size: 20px; color: var(--text-muted); }
+
+  /* ── BACK BUTTON EN HEADERS ─────────────────────────────── */
+  .btn-back {
+    background: rgba(255,255,255,0.12); border: none; border-radius: 20px;
+    color: #fff; padding: 6px 12px 6px 10px; font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; gap: 4px; cursor: pointer; -webkit-appearance: none;
+  }
+  .btn-back:active { background: rgba(255,255,255,0.22); }
+
+  /* ── GLOSARIO ───────────────────────────────────────────── */
+  #glosario-screen { display: none; }
+  .glosario-search {
+    padding: 12px 16px; background: var(--blue-dark);
+  }
+  .glosario-search input {
+    width: 100%; padding: 12px 14px; border: none; border-radius: var(--radius-sm);
+    font-size: 15px; color: var(--text-primary); background: var(--bg-card);
+    -webkit-appearance: none;
+  }
+  .glosario-search input:focus { outline: none; }
+  .glosario-list { padding: 16px; }
+  .term-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 12px; box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .term-card-head {
+    padding: 15px 16px; display: flex; justify-content: space-between;
+    align-items: center; cursor: pointer; gap: 10px;
+  }
+  .term-card-title { font-size: 14.5px; font-weight: 700; color: var(--text-primary); }
+  .term-card-chevron { font-size: 13px; color: var(--blue-mid); transition: transform 0.2s; flex-shrink: 0; }
+  .term-card.open .term-card-chevron { transform: rotate(180deg); }
+  .term-card-body {
+    max-height: 0; overflow: hidden; transition: max-height 0.25s ease;
+  }
+  .term-card.open .term-card-body { max-height: 400px; }
+  .term-card-body-inner {
+    padding: 0 16px 16px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.55;
+  }
+  .term-card-cat {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--blue-mid); background: var(--blue-pale);
+    padding: 3px 8px; border-radius: 20px; margin-top: 8px;
+  }
+  .glosario-mode {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    padding: 0 16px 14px; background: var(--blue-dark);
+  }
+  .glosario-mode button {
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 700;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  .glosario-mode button.active {
+    background: var(--blue-accent); border-color: var(--blue-accent); color: var(--blue-dark);
+  }
+  .quiz-wrap { padding: 16px; }
+  .quiz-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+    box-shadow: var(--shadow); cursor: pointer;
+  }
+  .quiz-eyebrow {
+    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 8px; font-weight: 700;
+  }
+  .quiz-title { font-size: 20px; font-weight: 800; color: var(--text-primary); line-height: 1.2; }
+  .quiz-hint { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+  .quiz-answer {
+    display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border);
+    font-size: 13.5px; line-height: 1.55; color: var(--text-secondary);
+  }
+  .quiz-card.revealed .quiz-answer { display: block; }
+  .quiz-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .quiz-actions button {
+    padding: 11px; border-radius: var(--radius-sm); border: 1.5px solid var(--border);
+    background: var(--bg-card); color: var(--text-secondary); font-size: 13px; font-weight: 700;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  .quiz-actions button:active { background: var(--blue-pale); }
+
+  /* ── CONDUCCIÓN ─────────────────────────────────────────── */
+  #conduccion-screen { display: none; }
+  .cond-content { padding: 16px; }
+  .cond-upload-card {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100%;
+    background: var(--bg-card); border: 2px dashed var(--border);
+    border-radius: var(--radius); padding: 26px 16px; text-align: center;
+    margin-bottom: 18px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  }
+  .cond-upload-card:active { border-color: var(--blue-mid); background: var(--blue-pale); }
+  .cond-upload-icon { font-size: 13px; font-weight: 800; letter-spacing: 0.08em; color: var(--blue-mid); margin-bottom: 8px; }
+  .cond-upload-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+  .cond-upload-sub { font-size: 11.5px; color: var(--text-muted); line-height: 1.4; }
+  .cond-input-hidden { display: none; }
+  .cond-section-title {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-secondary); margin: 4px 0 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .cond-count-badge {
+    background: var(--blue-pale); color: var(--blue-mid); font-size: 11px; font-weight: 700;
+    padding: 2px 9px; border-radius: 20px;
+  }
+  .cond-gallery {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px;
+  }
+  .cond-thumb {
+    position: relative; aspect-ratio: 1/1; border-radius: var(--radius-sm);
+    overflow: hidden; border: 1px solid var(--border); background: var(--bg-card);
+    box-shadow: var(--shadow); cursor: pointer;
+  }
+  .cond-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cond-thumb-del {
+    position: absolute; top: 4px; right: 4px; width: 22px; height: 22px;
+    background: rgba(13,31,53,0.65); color: #fff; border: none; border-radius: 50%;
+    font-size: 13px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; -webkit-appearance: none;
+  }
+  .cond-thumb-name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(0deg, rgba(13,31,53,0.75), transparent);
+    color: #fff; font-size: 9px; padding: 10px 5px 4px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .cond-empty-hint {
+    text-align: center; padding: 24px 16px; color: var(--text-muted); font-size: 12.5px;
+  }
+  .cond-offline-note {
+    display: flex; align-items: center; gap: 8px; background: var(--blue-pale);
+    color: var(--blue-mid); font-size: 11.5px; font-weight: 500; padding: 10px 12px;
+    border-radius: var(--radius-sm); margin-bottom: 16px; line-height: 1.4;
+  }
+  .observacion-card {
+    border-color: var(--danger-border);
+    background: var(--danger-bg);
+  }
+  .observacion-card .card-title { color: var(--danger); }
+  .observacion-textarea {
+    width: 100%; min-height: 90px; padding: 12px;
+    border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+    font-size: 15px; color: var(--text-primary); background: var(--bg-card);
+    resize: vertical; font-family: inherit; -webkit-appearance: none;
+  }
+  .observacion-textarea:focus { outline: none; border-color: var(--blue-mid); background: var(--input-focus-bg); }
+
+  /* Lightbox */
+  .lightbox-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(6,14,26,0.94); z-index: 60;
+    align-items: center; justify-content: center; flex-direction: column;
+  }
+  .lightbox-overlay.open { display: flex; }
+  .lightbox-topbar {
+    position: absolute; top: 0; left: 0; right: 0;
+    padding: calc(var(--safe-top) + 12px) 16px 12px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .lightbox-filename { color: rgba(255,255,255,0.85); font-size: 12.5px; font-weight: 500; max-width: 70%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lightbox-close {
+    background: rgba(255,255,255,0.12); border: none; color: #fff; width: 34px; height: 34px;
+    border-radius: 50%; font-size: 18px; cursor: pointer; -webkit-appearance: none;
+  }
+  .lightbox-img-wrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 70px 12px; }
+  .lightbox-img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+  .lightbox-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(255,255,255,0.12); border: none; color: #fff; width: 40px; height: 40px;
+    border-radius: 50%; font-size: 20px; cursor: pointer; -webkit-appearance: none;
+  }
+  .lightbox-prev { left: 10px; }
+  .lightbox-next { right: 10px; }
+</style>
+</head>
+<body>
+
+<div class="ios-banner" id="ios-banner">
+  Para utilizar sin conexión, seleccione <span>Compartir</span> y luego <span>Añadir a pantalla de inicio</span>.
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo-wrap">
+    <img src="data:image/jpeg;base64,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" alt="MantosGroup">
+  </div>
+  <div class="login-divider"></div>
+  <div class="login-app-title">Medición de Tasa de Riego</div>
+  <div class="login-card">
+    <label for="nombre-input">Nombre del operador</label>
+    <input type="text" id="nombre-input" placeholder="Ej: Juan Pérez" autocomplete="off"
+      onkeydown="if(event.key==='Enter') registrarOperador()">
+    <button class="btn-login" onclick="registrarOperador()">Ingresar</button>
+    <div class="login-hint">La información queda almacenada localmente en el dispositivo.</div>
+    <button class="theme-toggle login-theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar modo de visualización">
+      <span class="theme-toggle-mark"></span><span class="theme-toggle-label">Modo oscuro</span>
+    </button>
+  </div>
+</div>
+
+<!-- MENU PRINCIPAL -->
+<div id="menu-screen">
+  <div class="menu-header">
+    <div class="header-top">
+      <img src="logo.jpg" alt="MantosGroup" class="header-logo">
+      <div class="header-actions">
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar modo de visualización">
+          <span class="theme-toggle-mark"></span><span class="theme-toggle-label">Modo oscuro</span>
+        </button>
+        <button class="user-badge" onclick="openModal()">
+          <div class="user-avatar" id="menu-user-avatar">?</div>
+          <span id="menu-user-name-badge">—</span>
+        </button>
+      </div>
+    </div>
+    <div class="menu-welcome">Operador: <span id="menu-welcome-name">operador</span></div>
+    <div class="menu-welcome-sub">Seleccione el módulo de trabajo que desea utilizar.</div>
+  </div>
+  <div class="menu-options">
+    <button class="menu-card" onclick="goToMedicion()">
+      <div class="menu-card-icon">TR</div>
+      <div class="menu-card-text">
+        <div class="menu-card-title">Medición Tasa de Riego</div>
+        <div class="menu-card-desc">Registre mediciones, calcule la tasa de riego y consulte el historial.</div>
+      </div>
+      <div class="menu-card-arrow">›</div>
+    </button>
+    <button class="menu-card" onclick="goToGlosario()">
+      <div class="menu-card-icon alt">GT</div>
+      <div class="menu-card-text">
+        <div class="menu-card-title">Glosario de Términos</div>
+        <div class="menu-card-desc">Consulte definiciones y conceptos técnicos de terreno.</div>
+      </div>
+      <div class="menu-card-arrow">›</div>
+    </button>
+    <button class="menu-card" onclick="goToConduccion()">
+      <div class="menu-card-icon" style="background:linear-gradient(135deg,#8a5a2c,#c98a3f);">DC</div>
+      <div class="menu-card-text">
+        <div class="menu-card-title">Conducción</div>
+        <div class="menu-card-desc">Cargue imágenes de documentación operacional y consúltelas sin conexión.</div>
+      </div>
+      <div class="menu-card-arrow">›</div>
+    </button>
+  </div>
+</div>
+
+<!-- GLOSARIO DE TÉRMINOS -->
+<div id="glosario-screen">
+  <div class="app-header">
+    <div class="header-top">
+      <button class="btn-back" onclick="volverAlMenu()">Volver al menú</button>
+      <div class="header-right">
+        <span class="header-subtitle">Glosario de Términos</span>
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar modo de visualización">
+          <span class="theme-toggle-mark"></span><span class="theme-toggle-label">Modo oscuro</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="glosario-search">
+    <input type="text" id="glosario-buscador" placeholder="Buscar término..." autocomplete="off" oninput="filtrarGlosario()">
+  </div>
+  <div class="glosario-mode">
+    <button type="button" id="glosario-mode-list" class="active" onclick="setGlosarioMode('list')">Listado</button>
+    <button type="button" id="glosario-mode-quiz" onclick="setGlosarioMode('quiz')">Prueba</button>
+  </div>
+  <div class="glosario-list" id="glosario-list"></div>
+</div>
+
+<!-- CONDUCCIÓN -->
+<div id="conduccion-screen">
+  <div class="app-header">
+    <div class="header-top">
+      <button class="btn-back" onclick="volverAlMenu()">Volver al menú</button>
+      <div class="header-right">
+        <span class="header-subtitle">Conducción</span>
+        <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar modo de visualización">
+          <span class="theme-toggle-mark"></span><span class="theme-toggle-label">Modo oscuro</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="cond-content">
+    <div class="cond-offline-note">
+      Las imágenes se almacenan localmente en el dispositivo y permanecen disponibles sin conexión.
+    </div>
+    <label class="cond-upload-card" for="cond-input">
+      <div class="cond-upload-icon">DOC</div>
+      <div class="cond-upload-title">Cargar documentación</div>
+      <div class="cond-upload-sub">Seleccione una imagen de la galería o capture una nueva.</div>
+    </label>
+    <input type="file" id="cond-input" class="cond-input-hidden" accept="image/*" multiple onchange="subirDocumentos(event)">
+
+    <div class="cond-section-title">
+      <span>Documentación registrada</span>
+      <span class="cond-count-badge" id="cond-count">0</span>
+    </div>
+    <div class="cond-gallery" id="cond-gallery"></div>
+    <div class="cond-empty-hint" id="cond-empty-hint">No hay documentos cargados.</div>
+  </div>
+</div>
+
+<!-- LIGHTBOX (visor de imágenes de Conducción) -->
+<div class="lightbox-overlay" id="lightbox-overlay">
+  <div class="lightbox-topbar">
+    <span class="lightbox-filename" id="lightbox-filename"></span>
+    <button class="lightbox-close" onclick="cerrarLightbox()">&times;</button>
+  </div>
+  <button class="lightbox-nav lightbox-prev" onclick="navegarLightbox(-1)">‹</button>
+  <div class="lightbox-img-wrap"><img id="lightbox-img" src="" alt=""></div>
+  <button class="lightbox-nav lightbox-next" onclick="navegarLightbox(1)">›</button>
+</div>
+
+<!-- MAIN APP -->
+<div id="main-app">
+  <div class="app-header">
+    <div class="header-top">
+      <button class="btn-back" onclick="volverAlMenu()">Volver al menú</button>
+      <img src="data:image/jpeg;base64,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" alt="MantosGroup" class="header-logo">
+      <div class="header-right">
+        <span class="header-subtitle">Tasa de Riego</span>
+        <div class="header-actions">
+          <button class="theme-toggle" type="button" onclick="toggleTheme()" aria-label="Cambiar modo de visualización">
+            <span class="theme-toggle-mark"></span><span class="theme-toggle-label">Modo oscuro</span>
+          </button>
+          <button class="user-badge" onclick="openModal()">
+            <div class="user-avatar" id="user-avatar">?</div>
+            <span id="user-name-badge">—</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('form',0)">Nuevo registro</button>
+    <button class="tab" onclick="switchTab('records',1)">Historial</button>
+  </div>
+
+  <div class="content">
+    <div id="tab-form" class="section active">
+      <div class="card">
+        <div class="card-title">Identificación</div>
+        <div class="form-row">
+          <div class="form-group"><label>Pila N°</label><input type="number" id="pila" inputmode="numeric" placeholder="1"></div>
+          <div class="form-group"><label>Fase</label><input type="text" id="fase" placeholder="1A" autocomplete="off" maxlength="6"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>N° Módulo</label><input type="number" id="modulo" inputmode="numeric" placeholder="5"></div>
+          <div class="form-group"><label>Paño</label><input type="text" id="paño" placeholder="A1" autocomplete="off" maxlength="6"></div>
+        </div>
+        <div class="form-row single">
+          <div class="form-group">
+            <label>Cronómetro</label>
+            <input type="hidden" id="tiempo" value="36">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <div id="timer-display" style="flex:1;padding:11px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:22px;font-weight:700;color:var(--blue-mid);background:var(--bg);text-align:center;letter-spacing:2px;">36s</div>
+              <button id="timer-btn" type="button" onclick="toggleTimer()" style="padding:11px 16px;background:var(--blue-mid);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;min-width:90px;-webkit-appearance:none;">Iniciar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Volumen de muestra (mL)</div>
+        <div class="points-grid">
+          <div class="form-group"><label>Punto 1</label><input type="number" id="p1" inputmode="decimal" placeholder="0" step="0.1" oninput="calcVol()"></div>
+          <div class="form-group"><label>Punto 2</label><input type="number" id="p2" inputmode="decimal" placeholder="0" step="0.1" oninput="calcVol()"></div>
+          <div class="form-group"><label>Punto 3</label><input type="number" id="p3" inputmode="decimal" placeholder="0" step="0.1" oninput="calcVol()"></div>
+        </div>
+        <div class="vol-result" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+          <span>Volumen total de las muestras</span>
+          <strong id="vol-total">— mL</strong>
+        </div>
+        <div class="vol-result" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
+          <span>Promedio de las muestras</span>
+          <strong id="vol-display">— mL</strong>
+        </div>
+      </div>
+      <div class="tasa-card">
+        <div>
+          <div class="tasa-label">Tasa de riego</div>
+          <div class="tasa-value" id="tasa-display">—</div>
+          <div class="tasa-unit">L / hora</div>
+          <div class="tasa-formula">Vol. muestra × 0.4</div>
+        </div>
+        <div class="tasa-icon">L/h</div>
+      </div>
+      <div class="card observacion-card" id="observacion-card" style="display:none;">
+        <div class="card-title">Observación requerida: tasa de riego igual a 0</div>
+        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:10px;">La pila no registra riego. Indique el motivo antes de guardar.</p>
+        <textarea id="observacion" class="observacion-textarea" placeholder="Ej.: válvula cerrada, falla de bomba, mantención programada..."></textarea>
+      </div>
+      <button class="btn-save" onclick="saveRecord()">Guardar registro</button>
+      <button class="btn-secondary" onclick="clearForm()">Limpiar formulario</button>
+    </div>
+
+    <div id="tab-records" class="section">
+      <div class="stats-grid" id="stats-grid" style="display:none">
+        <div class="stat-box"><div class="stat-lbl">Registros</div><div class="stat-num" id="stat-count">0</div></div>
+        <div class="stat-box"><div class="stat-lbl">Promedio</div><div class="stat-num" id="stat-avg">—</div></div>
+        <div class="stat-box"><div class="stat-lbl">Máximo</div><div class="stat-num" id="stat-max">—</div></div>
+      </div>
+      <button class="btn-whatsapp" id="btn-whatsapp" onclick="compartirWhatsApp()" style="display:none">
+        Compartir reporte Excel por WhatsApp
+      </button>
+      <button id="btn-eliminar-todo" class="btn-danger-outline" onclick="eliminarTodoPaso1()" style="display:none;">
+        Eliminar todo el historial
+      </button>
+      <div id="records-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-title">Actualizar operador</div>
+    <input type="text" id="modal-nombre" placeholder="Nombre del operador" autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-modal-ok" onclick="cambiarOperador()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-overlay" id="del-overlay" onclick="closeDelOutside(event)">
+  <div class="modal-box">
+    <div class="modal-title" id="del-title">Eliminar todo el historial</div>
+    <p id="del-text" style="font-size:13px;color:var(--text-secondary);margin-bottom:18px;line-height:1.5;">
+      Esta acción eliminará permanentemente los <strong id="del-count">0</strong> registros guardados. No se puede deshacer.
+    </p>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeDelModal()">Cancelar</button>
+      <button class="btn-danger-fill" id="del-confirm-btn" onclick="eliminarTodoPaso2()">Confirmar eliminación</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- capacitor.js solo existe en el build nativo Android. En la PWA web (iOS)
+     este archivo no está presente: el navegador genera un 404 silencioso en
+     consola pero no afecta el funcionamiento de la app. -->
+<script src="capacitor.js"></script>
+<script>
+  var records = [];
+  var operador = '';
+  try { records = JSON.parse(localStorage.getItem('riego_v2') || '[]'); } catch(e) {}
+
+  var isCapacitor = (typeof window.Capacitor !== 'undefined' && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  var isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone = ('standalone' in navigator && navigator.standalone);
+  if (isIOS && !isStandalone) document.getElementById('ios-banner').style.display = 'block';
+
+  function getPreferredTheme() {
+    var savedTheme = null;
+    try { savedTheme = localStorage.getItem('mantos_theme'); } catch (e) {}
+    if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
+    var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
+  }
+
+  function applyTheme(themeName) {
+    var isDark = themeName === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    var metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute('content', isDark ? '#07111f' : '#1e3a5f');
+    document.querySelectorAll('.theme-toggle').forEach(function(btn) {
+      btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+    });
+    document.querySelectorAll('.theme-toggle-label').forEach(function(label) {
+      label.textContent = isDark ? 'Modo claro' : 'Modo oscuro';
+    });
+  }
+
+  function toggleTheme() {
+    var currentTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    var nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem('mantos_theme', nextTheme); } catch (e) {}
+    applyTheme(nextTheme);
+  }
+  applyTheme(getPreferredTheme());
+
+  function actualizarBadgesOperador(nombre) {
+    var ini = nombre.split(' ').map(function(w){ return w[0]; }).slice(0,2).join('').toUpperCase();
+    var primerNombre = nombre.split(' ')[0];
+    var elAvatar = document.getElementById('user-avatar');
+    var elBadge = document.getElementById('user-name-badge');
+    var elMenuAvatar = document.getElementById('menu-user-avatar');
+    var elMenuBadge = document.getElementById('menu-user-name-badge');
+    var elMenuWelcome = document.getElementById('menu-welcome-name');
+    if (elAvatar) elAvatar.textContent = ini;
+    if (elBadge) elBadge.textContent = primerNombre;
+    if (elMenuAvatar) elMenuAvatar.textContent = ini;
+    if (elMenuBadge) elMenuBadge.textContent = primerNombre;
+    if (elMenuWelcome) elMenuWelcome.textContent = nombre;
+  }
+
+  function registrarOperador() {
+    var nombre = document.getElementById('nombre-input').value.trim();
+    if (!nombre) { document.getElementById('nombre-input').style.borderColor = 'var(--danger)'; return; }
+    operador = nombre;
+    localStorage.setItem('riego_operador', operador);
+    actualizarBadgesOperador(nombre);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('menu-screen').style.display = 'block';
+  }
+  function openModal() { document.getElementById('modal-nombre').value = operador; document.getElementById('modal-overlay').classList.add('open'); }
+  function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+  function closeModalOutside(e) { if (e.target === document.getElementById('modal-overlay')) closeModal(); }
+  function cambiarOperador() {
+    var n = document.getElementById('modal-nombre').value.trim(); if (!n) return;
+    operador = n; localStorage.setItem('riego_operador', operador);
+    actualizarBadgesOperador(n);
+    closeModal(); showToast('Operador actualizado.');
+  }
+
+  // ── NAVEGACIÓN ENTRE PANTALLAS ──────────────────────────────
+  function ocultarTodasLasPantallas() {
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('glosario-screen').style.display = 'none';
+    document.getElementById('conduccion-screen').style.display = 'none';
+  }
+  function volverAlMenu() {
+    ocultarTodasLasPantallas();
+    document.getElementById('menu-screen').style.display = 'block';
+  }
+  function goToMedicion() {
+    ocultarTodasLasPantallas();
+    document.getElementById('main-app').style.display = 'block';
+  }
+  function goToGlosario() {
+    ocultarTodasLasPantallas();
+    document.getElementById('glosario-screen').style.display = 'block';
+    renderGlosario();
+  }
+  function goToConduccion() {
+    ocultarTodasLasPantallas();
+    document.getElementById('conduccion-screen').style.display = 'block';
+    renderGaleriaConduccion();
+  }
+  function switchTab(name, idx) {
+    document.querySelectorAll('.section').forEach(function(s){ s.classList.remove('active'); });
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelectorAll('.tab')[idx].classList.add('active');
+    if (name === 'records') renderRecords();
+  }
+  function calcVol() {
+    var p1raw = document.getElementById('p1').value.trim();
+    var p2raw = document.getElementById('p2').value.trim();
+    var p3raw = document.getElementById('p3').value.trim();
+    var filled = [p1raw, p2raw, p3raw].filter(function(v){ return v !== ''; });
+    if (filled.length === 0) {
+      document.getElementById('vol-total').textContent = '— mL';
+      document.getElementById('vol-display').textContent = '— mL';
+      document.getElementById('tasa-display').textContent = '—';
+      document.getElementById('observacion-card').style.display = 'none';
+      return;
+    }
+    var p1 = parseFloat(p1raw) || 0;
+    var p2 = parseFloat(p2raw) || 0;
+    var p3 = parseFloat(p3raw) || 0;
+    var total = p1 + p2 + p3;
+    var vol = total / filled.length;
+    var tasa = vol * 0.4;
+    document.getElementById('vol-total').textContent = total.toFixed(2) + ' mL';
+    document.getElementById('vol-display').textContent = vol.toFixed(2) + ' mL';
+    document.getElementById('tasa-display').textContent = tasa.toFixed(2);
+    document.getElementById('observacion-card').style.display = (tasa === 0) ? 'block' : 'none';
+  }
+  function saveRecord() {
+    var pila = document.getElementById('pila').value.trim();
+    var fase = document.getElementById('fase').value.trim();
+    var modulo = document.getElementById('modulo').value.trim();
+    var pano = document.getElementById('paño').value.trim();
+    var tiempo = document.getElementById('tiempo').value.trim();
+    var p1raw = document.getElementById('p1').value.trim();
+    var p2raw = document.getElementById('p2').value.trim();
+    var p3raw = document.getElementById('p3').value.trim();
+    if (!pila || !fase || !modulo) { showToast('Complete Pila, Fase y Módulo.'); return; }
+    var filled = [p1raw, p2raw, p3raw].filter(function(v){ return v !== ''; });
+    if (filled.length === 0) { showToast('Ingrese al menos un punto de volumen.'); return; }
+    var p1 = parseFloat(p1raw) || 0;
+    var p2 = parseFloat(p2raw) || 0;
+    var p3 = parseFloat(p3raw) || 0;
+    var vol = (p1+p2+p3) / filled.length;
+    var tasa = vol * 0.4;
+    var observacion = '';
+    if (tasa === 0) {
+      observacion = document.getElementById('observacion').value.trim();
+      if (!observacion) { showToast('Indique el motivo en Observación.'); return; }
+    }
+    var now = new Date();
+    var fecha = now.toLocaleDateString('es-CL') + ' ' + now.toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+    records.unshift({ id: Date.now(), fecha: fecha, operador: operador, pila: pila, fase: fase, modulo: modulo, pano: pano, tiempo: tiempo||'—', p1: p1, p2: p2, p3: p3, volumen: parseFloat(vol.toFixed(2)), tasa: parseFloat(tasa.toFixed(2)), observacion: observacion });
+    localStorage.setItem('riego_v2', JSON.stringify(records));
+    localStorage.setItem('riego_last_fase', fase);
+    localStorage.setItem('riego_last_pila', pila);
+    showToast('Registro guardado.'); clearForm();
+  }
+  function clearForm() {
+    ['pila','fase','modulo','paño','p1','p2','p3'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('observacion').value = '';
+    document.getElementById('observacion-card').style.display = 'none';
+    var lastFase = localStorage.getItem('riego_last_fase');
+    if (lastFase) document.getElementById('fase').value = lastFase;
+    var lastPila = localStorage.getItem('riego_last_pila');
+    if (lastPila) document.getElementById('pila').value = lastPila;
+    document.getElementById('vol-total').textContent = '— mL';
+    document.getElementById('vol-display').textContent = '— mL';
+    document.getElementById('tasa-display').textContent = '—';
+    resetTimer();
+  }
+  function deleteRecord(id) {
+    if (!confirm('¿Confirma que desea eliminar este registro?')) return;
+    records = records.filter(function(r){ return r.id !== id; });
+    localStorage.setItem('riego_v2', JSON.stringify(records));
+    renderRecords(); showToast('Registro eliminado.');
+  }
+  function renderRecords() {
+    var list = document.getElementById('records-list');
+    var sg = document.getElementById('stats-grid');
+    var bw = document.getElementById('btn-whatsapp');
+    if (records.length === 0) { sg.style.display='none'; bw.style.display='none'; document.getElementById('btn-eliminar-todo').style.display='none'; list.innerHTML='<div class="empty"><div class="empty-icon">Sin registros</div><p>No hay registros disponibles.</p></div>'; return; }
+    sg.style.display='grid'; bw.style.display='flex'; document.getElementById('btn-eliminar-todo').style.display='block';
+    var avg = records.reduce(function(a,r){ return a+r.tasa; },0) / records.length;
+    var max = Math.max.apply(null, records.map(function(r){ return r.tasa; }));
+    document.getElementById('stat-count').textContent = records.length;
+    document.getElementById('stat-avg').textContent = avg.toFixed(1);
+    document.getElementById('stat-max').textContent = max.toFixed(1);
+    list.innerHTML = records.map(function(r) {
+      var tasaColor = (r.tasa === 0) ? 'color:var(--danger);' : '';
+      var obsBlock = (r.tasa === 0 && r.observacion) ?
+        '<div class="rec-observacion"><strong>Observación:</strong> ' + r.observacion + '</div>' : '';
+      return '<div class="record-item"><div class="rec-header"><div>'+
+        '<div class="rec-title">Pila '+r.pila+' · Fase '+r.fase+' · Módulo '+r.modulo+' · Paño '+r.pano+'</div>'+
+        '<div class="rec-date">'+r.fecha+'</div>'+
+        '<div class="rec-operator">Operador: '+(r.operador||'—')+'</div>'+
+        '</div><button class="btn-del" onclick="deleteRecord('+r.id+')">&times;</button></div>'+
+        '<div class="rec-chips"><span class="chip">Tiempo: '+r.tiempo+' seg</span><span class="chip">Volumen: '+r.volumen+' mL</span><span class="chip">P1: '+r.p1+' P2: '+r.p2+' P3: '+r.p3+'</span></div>'+
+        '<div class="rec-tasa"><span class="big" style="'+tasaColor+'">'+r.tasa+'</span><span class="unit"> L/h</span></div>'+
+        obsBlock+'</div>';
+    }).join('');
+  }
+  // ── EXPORTAR (.xlsx real: ZIP + Office Open XML, construido a mano sin librerías) ──
+  function getFilename() { return 'tasa_riego_' + new Date().toISOString().slice(0,10) + '.xlsx'; }
+
+  // --- CRC32 (requerido por el formato ZIP) ---
+  var CRC_TABLE = (function () {
+    var t = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) crc = CRC_TABLE[(crc ^ bytes[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function strToUtf8Bytes(str) {
+    var bytes = [];
+    for (var i = 0; i < str.length; i++) {
+      var code = str.charCodeAt(i);
+      if (code < 0x80) { bytes.push(code); }
+      else if (code < 0x800) { bytes.push(0xC0 | (code >> 6), 0x80 | (code & 0x3F)); }
+      else if (code >= 0xD800 && code <= 0xDBFF) {
+        var next = str.charCodeAt(++i);
+        var cp = ((code - 0xD800) << 10 | (next - 0xDC00)) + 0x10000;
+        bytes.push(0xF0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3F), 0x80 | ((cp >> 6) & 0x3F), 0x80 | (cp & 0x3F));
+      } else { bytes.push(0xE0 | (code >> 12), 0x80 | ((code >> 6) & 0x3F), 0x80 | (code & 0x3F)); }
+    }
+    return bytes;
+  }
+  function u16(n) { return [n & 0xFF, (n >> 8) & 0xFF]; }
+  function u32(n) { return [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]; }
+  var DOS_TIME = 0x00, DOS_DATE = 0x21;
+
+  // --- Construcción del contenedor ZIP (compresión STORE, sin deflate: máxima compatibilidad/simplicidad) ---
+  function buildZip(files) {
+    var localParts = [], centralParts = [], offset = 0, entries = [];
+    files.forEach(function (f) {
+      var nameBytes = strToUtf8Bytes(f.name);
+      var dataBytes = f.data;
+      var crc = crc32(dataBytes);
+      var size = dataBytes.length;
+      var localHeader = [].concat(u32(0x04034b50), u16(20), u16(0x0800), u16(0), u16(DOS_TIME), u16(DOS_DATE),
+        u32(crc), u32(size), u32(size), u16(nameBytes.length), u16(0), nameBytes);
+      var localEntry = localHeader.concat(dataBytes);
+      entries.push({ name: f.name, nameBytes: nameBytes, crc: crc, size: size, offset: offset });
+      localParts.push(localEntry);
+      offset += localEntry.length;
+    });
+    var centralOffsetStart = offset;
+    entries.forEach(function (e) {
+      var centralHeader = [].concat(u32(0x02014b50), u16(20), u16(20), u16(0x0800), u16(0), u16(DOS_TIME), u16(DOS_DATE),
+        u32(e.crc), u32(e.size), u32(e.size), u16(e.nameBytes.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(e.offset), e.nameBytes);
+      centralParts.push(centralHeader);
+    });
+    var centralSize = centralParts.reduce(function (a, p) { return a + p.length; }, 0);
+    var eocd = [].concat(u32(0x06054b50), u16(0), u16(0), u16(entries.length), u16(entries.length),
+      u32(centralSize), u32(centralOffsetStart), u16(0));
+    var all = [];
+    localParts.forEach(function (p) { all = all.concat(p); });
+    centralParts.forEach(function (p) { all = all.concat(p); });
+    all = all.concat(eocd);
+    return all;
+  }
+
+  function xmlEscape(v) {
+    var s = (v === null || v === undefined) ? '' : String(v);
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+  }
+
+  function colLetter(n) {
+    var s = ''; n = n + 1;
+    while (n > 0) { var rem = (n - 1) % 26; s = String.fromCharCode(65 + rem) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+
+  // Construye los bytes del .xlsx a partir de filas { v, style, merge }
+  function buildXlsxBytes(rows, numCols, sheetName, colWidth, freezeRows) {
+    var sharedStrings = [], sharedIndex = {};
+    function sstIndex(text) {
+      if (sharedIndex.hasOwnProperty(text)) return sharedIndex[text];
+      var idx = sharedStrings.length; sharedStrings.push(text); sharedIndex[text] = idx; return idx;
+    }
+    var mergeCells = [];
+    var rowsXml = rows.map(function (row, rIdx) {
+      var rowNum = rIdx + 1;
+      var cellsXml = row.map(function (cell, cIdx) {
+        var ref = colLetter(cIdx) + rowNum;
+        if (cell.merge && cell.merge > 1) {
+          mergeCells.push(ref + ':' + colLetter(cIdx + cell.merge - 1) + rowNum);
+        }
+        var text = (cell.v === null || cell.v === undefined) ? '' : String(cell.v);
+        var idx = sstIndex(text);
+        var styleAttr = cell.style !== undefined ? (' s="' + cell.style + '"') : '';
+        return '<c r="' + ref + '" t="s"' + styleAttr + '><v>' + idx + '</v></c>';
+      }).join('');
+      return '<row r="' + rowNum + '">' + cellsXml + '</row>';
+    }).join('');
+
+    var dimensionRef = 'A1:' + colLetter(numCols - 1) + rows.length;
+    var sheetXmlParts = [
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+      '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+      '<dimension ref="' + dimensionRef + '"/>',
+      '<sheetViews><sheetView workbookViewId="0">'
+    ];
+    if (freezeRows > 0) {
+      sheetXmlParts.push('<pane ySplit="' + freezeRows + '" topLeftCell="A' + (freezeRows + 1) + '" activePane="bottomLeft" state="frozen"/>');
+    }
+    sheetXmlParts.push('</sheetView></sheetViews>', '<cols>');
+    for (var c = 0; c < numCols; c++) sheetXmlParts.push('<col min="' + (c + 1) + '" max="' + (c + 1) + '" width="' + colWidth + '" customWidth="1"/>');
+    sheetXmlParts.push('</cols>', '<sheetData>' + rowsXml + '</sheetData>');
+    if (mergeCells.length > 0) {
+      sheetXmlParts.push('<mergeCells count="' + mergeCells.length + '">');
+      mergeCells.forEach(function (m) { sheetXmlParts.push('<mergeCell ref="' + m + '"/>'); });
+      sheetXmlParts.push('</mergeCells>');
+    }
+    sheetXmlParts.push('</worksheet>');
+    var sheetXml = sheetXmlParts.join('');
+
+    var sstXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' + sharedStrings.length + '" uniqueCount="' + sharedStrings.length + '">' +
+      sharedStrings.map(function (s) { return '<si><t xml:space="preserve">' + xmlEscape(s) + '</t></si>'; }).join('') + '</sst>';
+
+    var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="4">' +
+        '<font><sz val="11"/><name val="Calibri"/></font>' +
+        '<font><sz val="14"/><b/><name val="Calibri"/></font>' +
+        '<font><sz val="10"/><b/><name val="Calibri"/></font>' +
+        '<font><sz val="11"/><b/><color rgb="FFFFFFFF"/><name val="Calibri"/></font>' +
+      '</fonts>' +
+      '<fills count="3">' +
+        '<fill><patternFill patternType="none"/></fill>' +
+        '<fill><patternFill patternType="gray125"/></fill>' +
+        '<fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/><bgColor indexed="64"/></patternFill></fill>' +
+      '</fills>' +
+      '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="4">' +
+        '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+        '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+        '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' +
+        '<xf numFmtId="0" fontId="3" fillId="2" borderId="0" applyAlignment="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' +
+      '</cellXfs>' +
+      '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
+      '</styleSheet>';
+
+    var workbookXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<sheets><sheet name="' + xmlEscape(sheetName) + '" sheetId="1" r:id="rId1"/></sheets></workbook>';
+
+    var workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
+      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>' +
+      '</Relationships>';
+
+    var rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>' +
+      '</Relationships>';
+
+    var contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+      '<Default Extension="xml" ContentType="application/xml"/>' +
+      '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
+      '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+      '<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>' +
+      '</Types>';
+
+    var files = [
+      { name: '[Content_Types].xml', data: strToUtf8Bytes(contentTypes) },
+      { name: '_rels/.rels', data: strToUtf8Bytes(rootRels) },
+      { name: 'xl/workbook.xml', data: strToUtf8Bytes(workbookXml) },
+      { name: 'xl/_rels/workbook.xml.rels', data: strToUtf8Bytes(workbookRels) },
+      { name: 'xl/styles.xml', data: strToUtf8Bytes(stylesXml) },
+      { name: 'xl/sharedStrings.xml', data: strToUtf8Bytes(sstXml) },
+      { name: 'xl/worksheets/sheet1.xml', data: strToUtf8Bytes(sheetXml) }
+    ];
+    return buildZip(files);
+  }
+
+  // Convierte un array de bytes a base64 (por chunks, evita límites de argumentos en navegadores)
+  function bytesToBase64(bytes) {
+    var CHUNK = 0x8000, bin = '';
+    for (var i = 0; i < bytes.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, bytes.slice(i, i + CHUNK));
+    }
+    return btoa(bin);
+  }
+
+  function buildXLS() {
+    var hoy = new Date().toLocaleDateString('es-CL');
+    var ths = ['Fecha','Operador','Pila','Fase','Módulo','Paño','Tiempo',
+               'Punto 1','Punto 2','Punto 3','Vol. Total','Promedio','Tasa (L/h)','Observación'];
+    var numCols = ths.length;
+
+    var rows = [];
+    rows.push([{ v: 'Mantos Group', style: 1, merge: numCols }]);
+    rows.push([{ v: 'Fecha: ' + hoy + '   |   Total registros: ' + records.length, style: 2, merge: numCols }]);
+    rows.push(new Array(numCols).fill(null).map(function () { return { v: '', style: 0 }; }));
+    rows.push(ths.map(function (t) { return { v: t, style: 3 }; }));
+
+    records.forEach(function (r) {
+      var volTotal = (r.p1 + r.p2 + r.p3).toFixed(2);
+      var obs = r.observacion || '—';
+      var fila = [
+        r.fecha, r.operador || '—', r.pila, r.fase, r.modulo, r.pano || '—',
+        r.tiempo + ' seg', r.p1, r.p2, r.p3,
+        volTotal + ' mL', r.volumen + ' mL', r.tasa + ' L/h', obs
+      ];
+      rows.push(fila.map(function (v) { return { v: v, style: 0 }; }));
+    });
+
+    return buildXlsxBytes(rows, numCols, 'Tasa Riego', 14, 4);
+  }
+
+  function compartirWhatsApp() {
+    if (records.length === 0) { showToast('No hay registros para exportar.'); return; }
+    showToast('Generando reporte...');
+    var xlsxBytes = buildXLS();
+    var filename = getFilename();
+    if (isCapacitor) {
+      var Filesystem = window.Capacitor.Plugins.Filesystem;
+      var Share = window.Capacitor.Plugins.Share;
+      Filesystem.writeFile({ path: filename, data: bytesToBase64(xlsxBytes), directory: 'CACHE' })
+        .then(function(r){ return Share.share({ title:'Reporte Tasa de Riego', text:'Mantos Group - '+new Date().toLocaleDateString('es-CL'), url:r.uri, dialogTitle:'Compartir' }); })
+        .then(function(){ showToast('Reporte compartido.'); })
+        .catch(function(e){ showToast(e.message || 'Error al compartir.'); });
+    } else {
+      var blob = new Blob([new Uint8Array(xlsxBytes)], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var file = new File([blob], filename, { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      if (navigator.canShare && navigator.canShare({ files:[file] })) {
+        navigator.share({ title:'Reporte Tasa de Riego', text:'Mantos Group', files:[file] })
+          .then(function(){ showToast('Reporte compartido.'); })
+          .catch(function(e){ if(e.name!=='AbortError') showToast('Error al compartir.'); });
+      } else {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a'); a.href=url; a.download=filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+        showToast('Reporte descargado.');
+      }
+    }
+  }
+
+
+  // ── CRONÓMETRO ───────────────────────────────────────────────
+  var timerInterval = null;
+  var timerSeconds = 36;
+  var timerRunning = false;
+
+  function toggleTimer() {
+    if (!timerRunning) {
+      startTimer();
+    } else {
+      resetTimer();
+    }
+  }
+
+  function startTimer() {
+    timerSeconds = 36;
+    timerRunning = true;
+    updateTimerDisplay();
+    document.getElementById('timer-btn').textContent = 'Reiniciar';
+    document.getElementById('timer-btn').style.background = 'var(--danger)';
+    document.getElementById('timer-display').style.color = 'var(--blue-mid)';
+    timerInterval = setInterval(function() {
+      timerSeconds--;
+      updateTimerDisplay();
+      if (timerSeconds <= 0) {
+        clearInterval(timerInterval);
+        timerRunning = false;
+        document.getElementById('timer-display').textContent = 'Finalizado';
+        document.getElementById('timer-display').style.color = 'var(--success)';
+        document.getElementById('timer-btn').textContent = 'Iniciar';
+        document.getElementById('timer-btn').style.background = 'var(--blue-mid)';
+      }
+    }, 1000);
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    timerRunning = false;
+    timerSeconds = 36;
+    updateTimerDisplay();
+    document.getElementById('timer-display').style.color = 'var(--blue-mid)';
+    document.getElementById('timer-btn').textContent = 'Iniciar';
+    document.getElementById('timer-btn').style.background = 'var(--blue-mid)';
+  }
+
+  function updateTimerDisplay() {
+    document.getElementById('timer-display').textContent = timerSeconds + 's';
+  }
+
+  // ── ELIMINAR TODO (doble confirmación) ──────────────────────
+  var delPaso = 0;
+  function eliminarTodoPaso1() {
+    delPaso = 1;
+    document.getElementById('del-title').textContent = 'Eliminar todo el historial';
+    document.getElementById('del-count').textContent = records.length;
+    document.getElementById('del-text').innerHTML = 'Esta acción eliminará permanentemente los <strong>' + records.length + '</strong> registros guardados. No se puede deshacer.';
+    document.getElementById('del-confirm-btn').textContent = 'Confirmar eliminación';
+    document.getElementById('del-overlay').classList.add('open');
+  }
+  function eliminarTodoPaso2() {
+    if (delPaso === 1) {
+      // Segunda confirmación
+      delPaso = 2;
+      document.getElementById('del-title').textContent = 'Confirmación final';
+      document.getElementById('del-text').innerHTML = 'Confirme que desea eliminar definitivamente <strong>todos</strong> los registros.';
+      document.getElementById('del-confirm-btn').textContent = 'Eliminar definitivamente';
+      return;
+    }
+    // Confirmado dos veces: eliminar
+    records = [];
+    localStorage.setItem('riego_v2', JSON.stringify(records));
+    closeDelModal();
+    renderRecords();
+    showToast('Historial eliminado por completo.');
+  }
+  function closeDelModal() {
+    delPaso = 0;
+    document.getElementById('del-overlay').classList.remove('open');
+  }
+  function closeDelOutside(e) { if (e.target === document.getElementById('del-overlay')) closeDelModal(); }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, 3000);
+  }
+  renderRecords();
+
+  // ── GLOSARIO DE TÉRMINOS ─────────────────────────────────────
+  // Estructura de cada término: { id, titulo, categoria (opcional), contenido }
+  // Edita, agrega o quita objetos de este arreglo para actualizar el glosario.
+  var glosarioTerms = [
+    {
+      id: 'g1',
+      titulo: 'TARP',
+      categoria: 'Seguridad',
+      contenido: 'Herramienta de seguridad que controla la estabilidad de la pila.'
+    },
+    {
+      id: 'g2',
+      titulo: 'Controles críticos',
+      categoria: 'Seguridad',
+      contenido: 'Herramientas de seguridad que permiten evitar accidentes y fatalidades. Incluyen ART, listas de verificación, permisos de trabajo y cartillas.'
+    },
+    {
+      id: 'g3',
+      titulo: 'PLS',
+      categoria: 'Soluciones',
+      contenido: 'Solución ácida rica en cobre.'
+    },
+    {
+      id: 'g4',
+      titulo: 'Refino',
+      categoria: 'Soluciones',
+      contenido: 'Solución ácida pobre en cobre.'
+    },
+    {
+      id: 'g5',
+      titulo: 'Riego por avance',
+      categoria: 'Riego',
+      contenido: 'Solución intermedia ácida de recirculación en la pila.'
+    },
+    {
+      id: 'g6',
+      titulo: 'Curado',
+      categoria: 'Proceso',
+      contenido: 'Etapa de adición de ácido para precipitar sulfuros y disminuir el ciclo de lixiviación.'
+    },
+    {
+      id: 'g7',
+      titulo: 'ROM',
+      categoria: 'Pila',
+      contenido: 'Material de baja ley acopiado directamente desde la mina. Dimensión referencial de la pila: 200 x 50 m.'
+    },
+    {
+      id: 'g8',
+      titulo: 'HEAP',
+      categoria: 'Pila',
+      contenido: 'Material de alta ley acopiado mediante correas portables. Dimensión referencial de la pila: 84 x 43 m.'
+    },
+    {
+      id: 'g9',
+      titulo: 'Presión nominal',
+      categoria: 'Conducción',
+      contenido: 'Capacidad máxima de presión que soporta una tubería. Si el valor está expresado en bar, se multiplica por 14,6 para convertirlo a psi.'
+    },
+    {
+      id: 'g10',
+      titulo: 'Tasa de riego',
+      categoria: 'Medición',
+      contenido: 'Volumen de solución aplicada sobre un área y durante un tiempo determinado en la pila. En pila ROM debe ser igual o mayor a 6,5 L/h*m2 y en pila HEAP debe ser igual o mayor a 5,0 L/h*m2.'
+    },
+    {
+      id: 'g11',
+      titulo: 'Fase',
+      categoria: 'Terreno',
+      contenido: 'Etapa o sector definido dentro de una o más pilas.'
+    },
+    {
+      id: 'g12',
+      titulo: 'Pila',
+      categoria: 'Lixiviación',
+      contenido: 'Acumulación de mineral chancado y aglomerado, dispuesto sobre una geomembrana, donde se aplica la solución de riego para disolver los metales de interés.'
+    },
+    {
+      id: 'g13',
+      titulo: 'Módulo',
+      categoria: 'Terreno',
+      contenido: 'División dentro de la misma pila, delimitada desde la válvula en la línea de 110 mm hasta la línea de 63 mm.'
+    },
+    {
+      id: 'g14',
+      titulo: 'Paño',
+      categoria: 'Terreno',
+      contenido: 'Subdivisión dentro de los módulos. Desde abajo hacia arriba se denomina Paño A o Paño B.'
+    }
+  ];
+  var glosarioMode = 'list';
+  var quizIndex = 0;
+  var quizRevealed = false;
+
+  function escapeHtml(v) {
+    return String(v === null || v === undefined ? '' : v)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function getGlosarioFiltrado() {
+    var buscador = document.getElementById('glosario-buscador');
+    var f = ((buscador && buscador.value) || '').trim().toLowerCase();
+    return glosarioTerms.filter(function(t){
+      if (!f) return true;
+      return (t.titulo + ' ' + t.contenido + ' ' + (t.categoria||'')).toLowerCase().indexOf(f) !== -1;
+    });
+  }
+
+  function setGlosarioMode(mode) {
+    glosarioMode = mode === 'quiz' ? 'quiz' : 'list';
+    quizIndex = 0;
+    quizRevealed = false;
+    renderGlosario();
+  }
+
+  function syncGlosarioModeButtons() {
+    var listBtn = document.getElementById('glosario-mode-list');
+    var quizBtn = document.getElementById('glosario-mode-quiz');
+    if (listBtn) listBtn.classList.toggle('active', glosarioMode === 'list');
+    if (quizBtn) quizBtn.classList.toggle('active', glosarioMode === 'quiz');
+  }
+
+  function renderGlosario(filtro) {
+    var cont = document.getElementById('glosario-list');
+    syncGlosarioModeButtons();
+    var lista = getGlosarioFiltrado();
+    if (glosarioMode === 'quiz') {
+      renderGlosarioQuiz(lista);
+      return;
+    }
+    if (lista.length === 0) {
+      cont.innerHTML = '<div class="empty"><div class="empty-icon">Sin resultados</div><p>No se encontraron términos.</p></div>';
+      return;
+    }
+    cont.innerHTML = lista.map(function(t){
+      var titulo = escapeHtml(t.titulo);
+      var contenido = escapeHtml(t.contenido);
+      var categoria = escapeHtml(t.categoria || '');
+      return '<div class="term-card" id="term-' + t.id + '">' +
+        '<div class="term-card-head" onclick="toggleTerm(\'' + t.id + '\')">' +
+          '<div class="term-card-title">' + titulo + '</div>' +
+          '<div class="term-card-chevron">▾</div>' +
+        '</div>' +
+        '<div class="term-card-body"><div class="term-card-body-inner">' +
+          contenido +
+          (t.categoria ? '<div><span class="term-card-cat">' + categoria + '</span></div>' : '') +
+        '</div></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function renderGlosarioQuiz(lista) {
+    var cont = document.getElementById('glosario-list');
+    if (lista.length === 0) {
+      cont.innerHTML = '<div class="empty"><div class="empty-icon">Sin resultados</div><p>No hay términos disponibles para la prueba.</p></div>';
+      return;
+    }
+    if (quizIndex >= lista.length) quizIndex = 0;
+    if (quizIndex < 0) quizIndex = lista.length - 1;
+    var t = lista[quizIndex];
+    cont.innerHTML =
+      '<div class="quiz-wrap">' +
+        '<div class="quiz-card' + (quizRevealed ? ' revealed' : '') + '" onclick="revelarRespuestaGlosario()">' +
+          '<div class="quiz-eyebrow">Término ' + (quizIndex + 1) + ' de ' + lista.length + '</div>' +
+          '<div class="quiz-title">' + escapeHtml(t.titulo) + '</div>' +
+          '<div class="quiz-hint">' + (quizRevealed ? 'Respuesta visible.' : 'Presione la tarjeta para revelar la respuesta asociada.') + '</div>' +
+          '<div class="quiz-answer">' + escapeHtml(t.contenido) +
+            (t.categoria ? '<div><span class="term-card-cat">' + escapeHtml(t.categoria) + '</span></div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="quiz-actions">' +
+          '<button type="button" onclick="cambiarTarjetaGlosario(-1)">Anterior</button>' +
+          '<button type="button" onclick="cambiarTarjetaGlosario(1)">Siguiente</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function revelarRespuestaGlosario() {
+    quizRevealed = true;
+    renderGlosario();
+  }
+
+  function cambiarTarjetaGlosario(dir) {
+    var lista = getGlosarioFiltrado();
+    if (lista.length === 0) return;
+    quizIndex = (quizIndex + dir + lista.length) % lista.length;
+    quizRevealed = false;
+    renderGlosario();
+  }
+
+  function toggleTerm(id) {
+    var el = document.getElementById('term-' + id);
+    if (el) el.classList.toggle('open');
+  }
+
+  function filtrarGlosario() {
+    quizIndex = 0;
+    quizRevealed = false;
+    renderGlosario();
+  }
+
+  // ── CONDUCCIÓN: SUBIDA Y GALERÍA OFFLINE ─────────────────────
+  // Cada documento queda guardado como { id, nombre, fecha, dataUrl } en localStorage,
+  // por lo que las imágenes quedan disponibles en el dispositivo aunque no haya señal.
+  var CONDUCCION_KEY = 'conduccion_docs_v1';
+  var conduccionDocs = [];
+  try { conduccionDocs = JSON.parse(localStorage.getItem(CONDUCCION_KEY) || '[]'); } catch(e) { conduccionDocs = []; }
+  var lightboxIndex = 0;
+
+  function guardarConduccionDocs() {
+    try {
+      localStorage.setItem(CONDUCCION_KEY, JSON.stringify(conduccionDocs));
+      return true;
+    } catch (e) {
+      // localStorage lleno: se elimina el documento más antiguo y se reintenta una vez
+      if (conduccionDocs.length > 0) {
+        conduccionDocs.shift();
+        try { localStorage.setItem(CONDUCCION_KEY, JSON.stringify(conduccionDocs)); return true; } catch (e2) {}
+      }
+      showToast('No hay espacio suficiente en el dispositivo para guardar la imagen.');
+      return false;
+    }
+  }
+
+  function subirDocumentos(event) {
+    var files = Array.prototype.slice.call(event.target.files || []);
+    if (files.length === 0) return;
+    var pendientes = files.length;
+    files.forEach(function (file) {
+      if (!file.type || file.type.indexOf('image/') !== 0) { pendientes--; return; }
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        conduccionDocs.push({
+          id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          nombre: file.name || 'Documento.jpg',
+          fecha: new Date().toLocaleDateString('es-CL'),
+          dataUrl: e.target.result
+        });
+        pendientes--;
+        if (pendientes <= 0) {
+          guardarConduccionDocs();
+          renderGaleriaConduccion();
+          showToast('Documento guardado. Disponible sin conexión.');
+        }
+      };
+      reader.onerror = function () {
+        pendientes--;
+        showToast('No se pudo leer una de las imágenes.');
+      };
+      reader.readAsDataURL(file);
+    });
+    event.target.value = '';
+  }
+
+  function renderGaleriaConduccion() {
+    var cont = document.getElementById('cond-gallery');
+    var hint = document.getElementById('cond-empty-hint');
+    var count = document.getElementById('cond-count');
+    count.textContent = conduccionDocs.length;
+    if (conduccionDocs.length === 0) {
+      cont.innerHTML = '';
+      hint.style.display = 'block';
+      return;
+    }
+    hint.style.display = 'none';
+    cont.innerHTML = conduccionDocs.map(function (d, i) {
+      return '<div class="cond-thumb" onclick="abrirLightbox(' + i + ')">' +
+        '<img src="' + d.dataUrl + '" alt="' + d.nombre + '">' +
+        '<div class="cond-thumb-name">' + d.nombre + '</div>' +
+        '<button class="cond-thumb-del" onclick="event.stopPropagation(); eliminarDocumentoConduccion(\'' + d.id + '\')">&times;</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  function eliminarDocumentoConduccion(id) {
+    conduccionDocs = conduccionDocs.filter(function (d) { return d.id !== id; });
+    guardarConduccionDocs();
+    renderGaleriaConduccion();
+    showToast('Documento eliminado.');
+  }
+
+  function abrirLightbox(index) {
+    if (conduccionDocs.length === 0) return;
+    lightboxIndex = index;
+    mostrarImagenLightbox();
+    document.getElementById('lightbox-overlay').classList.add('open');
+  }
+  function mostrarImagenLightbox() {
+    var d = conduccionDocs[lightboxIndex];
+    if (!d) return;
+    document.getElementById('lightbox-img').src = d.dataUrl;
+    document.getElementById('lightbox-filename').textContent = d.nombre;
+  }
+  function navegarLightbox(dir) {
+    if (conduccionDocs.length === 0) return;
+    lightboxIndex = (lightboxIndex + dir + conduccionDocs.length) % conduccionDocs.length;
+    mostrarImagenLightbox();
+  }
+  function cerrarLightbox() {
+    document.getElementById('lightbox-overlay').classList.remove('open');
+  }
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(function(e){ console.log('SW:', e); });
+  }
+</script>
+</body>
+</html>

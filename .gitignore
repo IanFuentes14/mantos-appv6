@@ -1,0 +1,11 @@
+build-apk-nuevo/
+build-apk-nuevo-*/
+node_modules/
+.npm-cache/
+
+*.apk
+*.aab
+*.zip
+
+.DS_Store
+Thumbs.db
