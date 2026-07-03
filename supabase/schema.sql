@@ -32,15 +32,42 @@ create table if not exists public.conduction_documents (
   created_at timestamptz not null default now()
 );
 
+alter table public.conduction_documents
+drop constraint if exists conduction_documents_status_check;
+
+alter table public.conduction_documents
+add constraint conduction_documents_status_check
+check (status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado'));
+
 alter table public.irrigation_measurements enable row level security;
 alter table public.conduction_documents enable row level security;
+
+grant insert on public.irrigation_measurements to anon, authenticated;
+grant select on public.irrigation_measurements to authenticated;
+grant insert on public.conduction_documents to anon, authenticated;
+grant select on public.conduction_documents to authenticated;
+revoke update on public.conduction_documents from anon;
+revoke update on public.conduction_documents from authenticated;
+grant update (status) on public.conduction_documents to authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
 create policy "Public can insert irrigation measurements"
 on public.irrigation_measurements
 for insert
 to anon, authenticated
-with check (true);
+with check (
+  length(trim(operator_name)) between 1 and 120
+  and length(trim(pile)) between 1 and 80
+  and length(trim(phase)) between 1 and 80
+  and length(trim(module)) between 1 and 80
+  and sample_1_ml >= 0
+  and sample_2_ml >= 0
+  and sample_3_ml >= 0
+  and total_volume_ml >= 0
+  and average_volume_ml >= 0
+  and irrigation_rate_lh >= 0
+  and measured_at <= now() + interval '1 day'
+);
 
 drop policy if exists "Authenticated users can read irrigation measurements" on public.irrigation_measurements;
 create policy "Authenticated users can read irrigation measurements"
@@ -54,7 +81,13 @@ create policy "Public can insert conduction documents"
 on public.conduction_documents
 for insert
 to anon, authenticated
-with check (true);
+with check (
+  length(trim(driver_name)) between 1 and 120
+  and length(trim(file_name)) between 1 and 255
+  and length(trim(file_path)) between 1 and 500
+  and status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado')
+  and uploaded_at <= now() + interval '1 day'
+);
 
 drop policy if exists "Authenticated users can read conduction documents" on public.conduction_documents;
 create policy "Authenticated users can read conduction documents"
@@ -68,8 +101,11 @@ create policy "Authenticated users can update conduction document status"
 on public.conduction_documents
 for update
 to authenticated
-using (true)
-with check (true);
+using ((select auth.role()) = 'authenticated')
+with check (
+  (select auth.role()) = 'authenticated'
+  and status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado')
+);
 
 insert into storage.buckets (id, name, public)
 values ('conduction-documents', 'conduction-documents', false)
