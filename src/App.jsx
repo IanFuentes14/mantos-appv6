@@ -83,7 +83,7 @@ function App() {
   const [operator, setOperator] = useState(getOperatorName());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [session, setSession] = useState(null);
-  const [screen, setScreen] = useState(operator ? 'menu' : 'login');
+  const [screen, setScreen] = useState('login');
   const [measurementTab, setMeasurementTab] = useState('form');
   const [measurement, setMeasurement] = useState(initialMeasurement);
   const [measurements, setMeasurements] = useState(getQueuedMeasurements());
@@ -222,7 +222,12 @@ function App() {
       email: adminEmail,
       password: adminPassword,
     });
-    setMessage(error ? error.message : 'Ingreso administrativo correcto.');
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setMessage('Ingreso administrativo correcto.');
+    setScreen('admin');
   }
 
   async function handleAdminLogout() {
@@ -317,7 +322,12 @@ function App() {
           operator={operator}
           setOperator={setOperator}
           onSubmit={enterOffline}
-          onAdmin={() => setScreen('admin')}
+          adminEmail={adminEmail}
+          adminPassword={adminPassword}
+          setAdminEmail={setAdminEmail}
+          setAdminPassword={setAdminPassword}
+          onAdminLogin={handleAdminLogin}
+          canUseSupabase={canUseSupabase}
           onTheme={toggleTheme}
           theme={theme}
         />
@@ -406,25 +416,74 @@ function App() {
   );
 }
 
-function LoginScreen({ operator, setOperator, onSubmit, onAdmin, onTheme, theme }) {
+function LoginScreen({
+  operator,
+  setOperator,
+  onSubmit,
+  adminEmail,
+  adminPassword,
+  setAdminEmail,
+  setAdminPassword,
+  onAdminLogin,
+  canUseSupabase,
+  onTheme,
+  theme,
+}) {
+  const [mode, setMode] = useState('choice');
+
   return (
     <section id="login-screen">
+      <div className="login-welcome">
+        <h1>Bienvenido</h1>
+        <p>Seleccione el tipo de acceso para continuar con Mantos App.</p>
+      </div>
       <div className="login-logo-wrap">
-        <div className="logo-fallback">MantosGroup</div>
+        <div className="logo-fallback">MG</div>
       </div>
       <div className="login-divider" />
-      <div className="login-app-title">Medición de Tasa de Riego</div>
+      <div className="login-brand">
+        <div className="login-company-name">Mantos Group</div>
+        <div className="login-app-title">Medición de Tasa de Riego</div>
+      </div>
+
+      {mode === 'choice' && (
+        <div className="login-card access-card">
+          <button className="btn-login access-button" type="button" onClick={() => setMode('admin')}>Acceder como administrador</button>
+          <button className="btn-login access-button secondary-gradient" type="button" onClick={() => setMode('user')}>Acceder como usuario</button>
+          <button className="theme-toggle login-theme-toggle" type="button" onClick={onTheme}>
+            <span className="theme-toggle-mark" />
+            {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          </button>
+        </div>
+      )}
+
+      {mode === 'admin' && (
+        <form className="login-card" onSubmit={onAdminLogin}>
+          <div className="login-form-title">Acceso administrador</div>
+          {!canUseSupabase && <p className="admin-warning">Configure Supabase para habilitar el login administrativo.</p>}
+          <label htmlFor="login-admin-email">Correo</label>
+          <input id="login-admin-email" type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} placeholder="admin@mantos.app" />
+          <label htmlFor="login-admin-password">Contraseña</label>
+          <input id="login-admin-password" type="password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} placeholder="Contraseña" />
+          <button className="btn-login" type="submit">Ingresar al panel</button>
+          <button className="btn-secondary admin-login-button" type="button" onClick={() => setMode('choice')}>Volver</button>
+        </form>
+      )}
+
+      {mode === 'user' && (
       <form className="login-card" onSubmit={onSubmit}>
+        <div className="login-form-title">Acceso usuario</div>
         <label htmlFor="operator-name">Operador o conductor</label>
         <input id="operator-name" type="text" value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Nombre del operador" />
-        <button className="btn-login" type="submit">Ingresar</button>
-        <button className="btn-secondary admin-login-button" type="button" onClick={onAdmin}>Panel administrador</button>
+        <button className="btn-login" type="submit">Ingresar como usuario</button>
+        <button className="btn-secondary admin-login-button" type="button" onClick={() => setMode('choice')}>Volver</button>
         <button className="theme-toggle login-theme-toggle" type="button" onClick={onTheme}>
           <span className="theme-toggle-mark" />
           {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
         </button>
         <p className="login-hint">Los registros quedan disponibles sin conexión y se sincronizan al recuperar señal.</p>
       </form>
+      )}
     </section>
   );
 }
