@@ -25,7 +25,6 @@ create table if not exists public.conduction_documents (
   id uuid primary key default gen_random_uuid(),
   driver_name text not null,
   operator_name text,
-  status text not null default 'Pendiente',
   file_name text not null,
   file_path text not null,
   uploaded_at timestamptz not null default now(),
@@ -33,11 +32,7 @@ create table if not exists public.conduction_documents (
 );
 
 alter table public.conduction_documents
-drop constraint if exists conduction_documents_status_check;
-
-alter table public.conduction_documents
-add constraint conduction_documents_status_check
-check (status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado'));
+drop column if exists status;
 
 alter table public.irrigation_measurements enable row level security;
 alter table public.conduction_documents enable row level security;
@@ -48,7 +43,6 @@ grant insert on public.conduction_documents to anon, authenticated;
 grant select on public.conduction_documents to authenticated;
 revoke update on public.conduction_documents from anon;
 revoke update on public.conduction_documents from authenticated;
-grant update (status) on public.conduction_documents to authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
 create policy "Public can insert irrigation measurements"
@@ -85,7 +79,6 @@ with check (
   length(trim(driver_name)) between 1 and 120
   and length(trim(file_name)) between 1 and 255
   and length(trim(file_path)) between 1 and 500
-  and status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado')
   and uploaded_at <= now() + interval '1 day'
 );
 
@@ -97,15 +90,6 @@ to authenticated
 using (true);
 
 drop policy if exists "Authenticated users can update conduction document status" on public.conduction_documents;
-create policy "Authenticated users can update conduction document status"
-on public.conduction_documents
-for update
-to authenticated
-using ((select auth.role()) = 'authenticated')
-with check (
-  (select auth.role()) = 'authenticated'
-  and status in ('Pendiente', 'En revisión', 'Aprobado', 'Observado')
-);
 
 insert into storage.buckets (id, name, public)
 values ('conduction-documents', 'conduction-documents', false)

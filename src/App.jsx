@@ -26,8 +26,6 @@ const initialMeasurement = {
   observation: '',
 };
 
-const statusOptions = ['Pendiente', 'En revisión', 'Aprobado', 'Observado'];
-
 function nowIso() {
   return new Date().toISOString();
 }
@@ -43,6 +41,16 @@ function formatDate(value) {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+}
+
+function initials(value) {
+  return (value || 'OP')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((item) => item[0])
+    .join('')
+    .toUpperCase();
 }
 
 function buildMeasurementPayload(record) {
@@ -63,15 +71,23 @@ function buildMeasurementPayload(record) {
   };
 }
 
+function calculateMeasurement(values) {
+  const samples = [values.sample1, values.sample2, values.sample3].filter((value) => value !== '').map(Number);
+  const totalVolume = samples.reduce((sum, value) => sum + value, 0);
+  const averageVolume = samples.length ? totalVolume / samples.length : 0;
+  const irrigationRate = averageVolume * 0.4;
+  return { samples, totalVolume, averageVolume, irrigationRate };
+}
+
 function App() {
   const [operator, setOperator] = useState(getOperatorName());
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState(operator ? 'menu' : 'login');
+  const [measurementTab, setMeasurementTab] = useState('form');
   const [measurement, setMeasurement] = useState(initialMeasurement);
   const [measurements, setMeasurements] = useState(getQueuedMeasurements());
   const [documents, setDocuments] = useState(getQueuedDocuments());
-  const [documentStatus, setDocumentStatus] = useState('Pendiente');
   const [documentFiles, setDocumentFiles] = useState([]);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
@@ -79,12 +95,18 @@ function App() {
   const [adminDocuments, setAdminDocuments] = useState([]);
   const [message, setMessage] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('mantos_theme') || 'light');
 
   const canUseSupabase = isSupabaseConfigured && supabase;
   const pendingCount = useMemo(
     () => measurements.filter((item) => item.syncStatus !== 'synced').length + documents.filter((item) => item.syncStatus !== 'synced').length,
     [measurements, documents],
   );
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('mantos_theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -155,7 +177,6 @@ function App() {
         const insert = await supabase.from('conduction_documents').insert({
           driver_name: record.driverName,
           operator_name: record.operatorName,
-          status: record.status,
           file_name: record.fileName,
           file_path: storagePath,
           uploaded_at: record.createdAt,
@@ -219,14 +240,6 @@ function App() {
     setScreen('menu');
   }
 
-  function calculateMeasurement(values) {
-    const samples = [values.sample1, values.sample2, values.sample3].filter((value) => value !== '').map(Number);
-    const totalVolume = samples.reduce((sum, value) => sum + value, 0);
-    const averageVolume = samples.length ? totalVolume / samples.length : 0;
-    const irrigationRate = averageVolume * 0.4;
-    return { samples, totalVolume, averageVolume, irrigationRate };
-  }
-
   function saveMeasurement(event) {
     event.preventDefault();
     const calc = calculateMeasurement(measurement);
@@ -259,6 +272,7 @@ function App() {
     const next = addQueuedMeasurement(record);
     setMeasurements(next);
     setMeasurement(initialMeasurement);
+    setMeasurementTab('records');
     setMessage('Medición guardada en el dispositivo.');
   }
 
@@ -275,7 +289,6 @@ function App() {
         id: createId(),
         driverName: operator,
         operatorName: operator,
-        status: documentStatus,
         fileName: file.name || 'documento.jpg',
         mimeType: file.type || 'image/jpeg',
         dataUrl,
@@ -291,146 +304,88 @@ function App() {
     setMessage('Documentación guardada localmente.');
   }
 
-  async function updateAdminDocumentStatus(id, status) {
-    if (!session || !canUseSupabase) return;
-    const { error } = await supabase.from('conduction_documents').update({ status }).eq('id', id);
-    setMessage(error ? error.message : 'Estatus actualizado.');
-    if (!error) loadAdminData();
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-950">
-      <header className="bg-mantos-navy px-4 py-4 text-white shadow">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-blue-200">Mantos App</p>
-            <h1 className="text-lg font-bold">Tasa de Riego y Conducción</h1>
-          </div>
-          <div className="text-right text-xs">
-            <p>{isOnline ? 'Con conexión' : 'Sin conexión'}</p>
-            <p>{pendingCount} pendiente(s)</p>
-          </div>
-        </div>
-      </header>
-
-      {message && (
-        <div className="mx-auto mt-4 max-w-5xl px-4">
-          <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-mantos-navy">{message}</div>
-        </div>
-      )}
+    <main className="app-shell">
+      {message && <div className="toast show">{message}</div>}
 
       {screen === 'login' && (
-        <section className="mx-auto max-w-md px-4 py-8">
-          <div className="rounded-xl bg-white p-5 shadow">
-            <h2 className="text-lg font-bold text-mantos-ink">Acceso operativo</h2>
-            <p className="mt-1 text-sm text-slate-500">Ingrese el operador para utilizar la app en terreno. Funciona sin conexión.</p>
-            <form className="mt-5 space-y-3" onSubmit={enterOffline}>
-              <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Operador o conductor</label>
-              <input
-                value={operator}
-                onChange={(event) => setOperator(event.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-3 text-base outline-none focus:border-mantos-blue"
-                placeholder="Nombre del operador"
-              />
-              <button className="w-full rounded-lg bg-mantos-blue px-4 py-3 font-bold text-white" type="submit">
-                Ingresar a modo operativo
-              </button>
-            </form>
-            <button className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-3 font-bold text-slate-700" type="button" onClick={() => setScreen('admin')}>
-              Panel administrador
-            </button>
-          </div>
-        </section>
-      )}
-
-      {screen !== 'login' && (
-        <div className="mx-auto max-w-5xl px-4 py-4">
-          <nav className="grid grid-cols-2 gap-2 md:grid-cols-5">
-            <NavButton active={screen === 'menu'} onClick={() => setScreen('menu')}>Inicio</NavButton>
-            <NavButton active={screen === 'measurement'} onClick={() => setScreen('measurement')}>Medición</NavButton>
-            <NavButton active={screen === 'conduction'} onClick={() => setScreen('conduction')}>Conducción</NavButton>
-            <NavButton active={screen === 'glossary'} onClick={() => setScreen('glossary')}>Glosario</NavButton>
-            <NavButton active={screen === 'admin'} onClick={() => setScreen('admin')}>Admin</NavButton>
-          </nav>
-        </div>
+        <LoginScreen
+          operator={operator}
+          setOperator={setOperator}
+          onSubmit={enterOffline}
+          onAdmin={() => setScreen('admin')}
+          onTheme={toggleTheme}
+          theme={theme}
+        />
       )}
 
       {screen === 'menu' && (
-        <section className="mx-auto grid max-w-5xl gap-4 px-4 pb-10 md:grid-cols-3">
-          <DashboardCard title="Medición" value={`${measurements.length} registro(s)`} text="Registro de tasa de riego con cola offline." />
-          <DashboardCard title="Conducción" value={`${documents.length} documento(s)`} text="Carga de documentación con estatus operativo." />
-          <DashboardCard title="Sincronización" value={`${pendingCount} pendiente(s)`} text="Enviar registros a Supabase cuando exista señal." />
-          <button className="rounded-xl bg-mantos-navy px-4 py-4 font-bold text-white md:col-span-3" type="button" onClick={syncPending} disabled={syncing}>
-            {syncing ? 'Sincronizando...' : 'Sincronizar datos pendientes'}
-          </button>
-        </section>
+        <MenuScreen
+          operator={operator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          syncing={syncing}
+          measurements={measurements}
+          documents={documents}
+          onNavigate={setScreen}
+          onSync={syncPending}
+          onTheme={toggleTheme}
+          theme={theme}
+        />
       )}
 
       {screen === 'measurement' && (
-        <section className="mx-auto max-w-3xl px-4 pb-10">
-          <form className="rounded-xl bg-white p-5 shadow" onSubmit={saveMeasurement}>
-            <SectionTitle title="Registro de tasa de riego" subtitle="Los datos quedan guardados localmente y se sincronizan cuando exista conexión." />
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Pila" value={measurement.pile} onChange={(value) => setMeasurement({ ...measurement, pile: value })} />
-              <Field label="Fase" value={measurement.phase} onChange={(value) => setMeasurement({ ...measurement, phase: value })} />
-              <Field label="Módulo" value={measurement.module} onChange={(value) => setMeasurement({ ...measurement, module: value })} />
-              <Field label="Paño" value={measurement.panel} onChange={(value) => setMeasurement({ ...measurement, panel: value })} />
-              <Field label="Punto 1 (mL)" type="number" value={measurement.sample1} onChange={(value) => setMeasurement({ ...measurement, sample1: value })} />
-              <Field label="Punto 2 (mL)" type="number" value={measurement.sample2} onChange={(value) => setMeasurement({ ...measurement, sample2: value })} />
-              <Field label="Punto 3 (mL)" type="number" value={measurement.sample3} onChange={(value) => setMeasurement({ ...measurement, sample3: value })} />
-            </div>
-            <textarea
-              value={measurement.observation}
-              onChange={(event) => setMeasurement({ ...measurement, observation: event.target.value })}
-              className="mt-3 min-h-24 w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-mantos-blue"
-              placeholder="Observación operacional"
-            />
-            <MeasurementPreview measurement={measurement} />
-            <button className="mt-4 w-full rounded-lg bg-mantos-blue px-4 py-3 font-bold text-white" type="submit">
-              Guardar medición
-            </button>
-          </form>
-        </section>
+        <MeasurementScreen
+          operator={operator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          measurement={measurement}
+          setMeasurement={setMeasurement}
+          tab={measurementTab}
+          setTab={setMeasurementTab}
+          records={measurements}
+          onBack={() => setScreen('menu')}
+          onSubmit={saveMeasurement}
+          onTheme={toggleTheme}
+          theme={theme}
+        />
       )}
 
       {screen === 'conduction' && (
-        <section className="mx-auto max-w-3xl px-4 pb-10">
-          <form className="rounded-xl bg-white p-5 shadow" onSubmit={saveDocuments}>
-            <SectionTitle title="Conducción" subtitle="Carga documentación operacional y define su estatus inicial." />
-            <label className="block text-xs font-bold uppercase tracking-wide text-slate-600">Estatus</label>
-            <select
-              value={documentStatus}
-              onChange={(event) => setDocumentStatus(event.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-mantos-blue"
-            >
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
-            <label className="mt-4 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-              <span className="text-sm font-bold text-mantos-navy">Cargar documentación</span>
-              <span className="mt-1 text-xs text-slate-500">Seleccione una o más imágenes. Se guardan offline hasta sincronizar.</span>
-              <input
-                className="hidden"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(event) => setDocumentFiles(Array.from(event.target.files || []))}
-              />
-            </label>
-            {documentFiles.length > 0 && <p className="mt-2 text-sm text-slate-500">{documentFiles.length} archivo(s) seleccionado(s).</p>}
-            <button className="mt-4 w-full rounded-lg bg-mantos-blue px-4 py-3 font-bold text-white" type="submit">
-              Guardar documentación
-            </button>
-          </form>
-          <LocalDocuments documents={documents} />
-        </section>
+        <ConductionScreen
+          operator={operator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          documents={documents}
+          files={documentFiles}
+          setFiles={setDocumentFiles}
+          onBack={() => setScreen('menu')}
+          onSubmit={saveDocuments}
+          onTheme={toggleTheme}
+          theme={theme}
+        />
       )}
 
-      {screen === 'glossary' && <Glossary />}
+      {screen === 'glossary' && (
+        <GlossaryScreen
+          operator={operator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          onBack={() => setScreen('menu')}
+          onTheme={toggleTheme}
+          theme={theme}
+        />
+      )}
 
       {screen === 'admin' && (
-        <AdminPanel
+        <AdminScreen
+          operator={operator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
           canUseSupabase={canUseSupabase}
           session={session}
           adminEmail={adminEmail}
@@ -442,98 +397,253 @@ function App() {
           onRefresh={loadAdminData}
           measurements={adminMeasurements}
           documents={adminDocuments}
-          onStatusChange={updateAdminDocumentStatus}
+          onBack={() => setScreen(operator ? 'menu' : 'login')}
+          onTheme={toggleTheme}
+          theme={theme}
         />
       )}
     </main>
   );
 }
 
-function NavButton({ active, children, onClick }) {
+function LoginScreen({ operator, setOperator, onSubmit, onAdmin, onTheme, theme }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg px-3 py-3 text-sm font-bold ${active ? 'bg-mantos-navy text-white' : 'bg-white text-slate-700 shadow'}`}
-    >
-      {children}
+    <section id="login-screen">
+      <div className="login-logo-wrap">
+        <div className="logo-fallback">MantosGroup</div>
+      </div>
+      <div className="login-divider" />
+      <div className="login-app-title">Medición de Tasa de Riego</div>
+      <form className="login-card" onSubmit={onSubmit}>
+        <label htmlFor="operator-name">Operador o conductor</label>
+        <input id="operator-name" type="text" value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Nombre del operador" />
+        <button className="btn-login" type="submit">Ingresar</button>
+        <button className="btn-secondary admin-login-button" type="button" onClick={onAdmin}>Panel administrador</button>
+        <button className="theme-toggle login-theme-toggle" type="button" onClick={onTheme}>
+          <span className="theme-toggle-mark" />
+          {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        </button>
+        <p className="login-hint">Los registros quedan disponibles sin conexión y se sincronizan al recuperar señal.</p>
+      </form>
+    </section>
+  );
+}
+
+function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, theme }) {
+  return (
+    <header className="app-header">
+      <div className="header-top">
+        {onBack ? <button className="btn-back" type="button" onClick={onBack}>Volver al menú</button> : <div className="header-logo-text">MantosGroup</div>}
+        <div className="header-right">
+          <span className="header-subtitle">{title}</span>
+          <div className="header-actions">
+            <button className="theme-toggle" type="button" onClick={onTheme} aria-pressed={theme === 'dark'}>
+              <span className="theme-toggle-mark" />
+              {theme === 'dark' ? 'Claro' : 'Oscuro'}
+            </button>
+            <div className="user-badge">
+              <span className="user-avatar">{initials(operator)}</span>
+              <span>{operator || 'Operador'}</span>
+            </div>
+          </div>
+          <span className="header-subtitle">{isOnline ? 'Con conexión' : 'Sin conexión'} · {pendingCount} pendiente(s)</span>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MenuScreen({ operator, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, theme }) {
+  return (
+    <section id="menu-screen">
+      <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} theme={theme} />
+      <div className="menu-welcome">
+        <p>Bienvenido, {operator}</p>
+        <span>Seleccione el módulo de trabajo.</span>
+      </div>
+      <div className="menu-list">
+        <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
+        <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
+        <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
+        <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
+        <button className="btn-save menu-sync" type="button" onClick={onSync} disabled={syncing}>
+          {syncing ? 'Sincronizando...' : `Sincronizar datos pendientes (${pendingCount})`}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function MenuCard({ icon, title, desc, onClick, alt, brown }) {
+  return (
+    <button className="menu-card" type="button" onClick={onClick}>
+      <div className={`menu-card-icon ${alt ? 'alt' : ''} ${brown ? 'brown' : ''}`}>{icon}</div>
+      <div className="menu-card-text">
+        <div className="menu-card-title">{title}</div>
+        <div className="menu-card-desc">{desc}</div>
+      </div>
+      <div className="menu-card-arrow">›</div>
     </button>
   );
 }
 
-function DashboardCard({ title, value, text }) {
+function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onBack, onSubmit, onTheme, theme }) {
+  const preview = calculateMeasurement(measurement);
   return (
-    <article className="rounded-xl bg-white p-5 shadow">
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{title}</p>
-      <p className="mt-2 text-2xl font-black text-mantos-navy">{value}</p>
-      <p className="mt-2 text-sm text-slate-500">{text}</p>
-    </article>
-  );
-}
+    <section>
+      <Header title="Tasa de Riego" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <div className="tabs">
+        <button className={`tab ${tab === 'form' ? 'active' : ''}`} type="button" onClick={() => setTab('form')}>Formulario</button>
+        <button className={`tab ${tab === 'records' ? 'active' : ''}`} type="button" onClick={() => setTab('records')}>Historial</button>
+      </div>
+      <div className="content">
+        {tab === 'form' && (
+          <form onSubmit={onSubmit}>
+            <div className="card">
+              <div className="card-title">Identificación</div>
+              <div className="form-row">
+                <Field label="Pila" value={measurement.pile} onChange={(value) => setMeasurement({ ...measurement, pile: value })} />
+                <Field label="Fase" value={measurement.phase} onChange={(value) => setMeasurement({ ...measurement, phase: value })} />
+              </div>
+              <div className="form-row">
+                <Field label="Módulo" value={measurement.module} onChange={(value) => setMeasurement({ ...measurement, module: value })} />
+                <Field label="Paño" value={measurement.panel} onChange={(value) => setMeasurement({ ...measurement, panel: value })} />
+              </div>
+            </div>
 
-function SectionTitle({ title, subtitle }) {
-  return (
-    <div className="mb-5">
-      <h2 className="text-lg font-black text-mantos-ink">{title}</h2>
-      <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
-    </div>
+            <div className="card">
+              <div className="card-title">Volumen de muestra (mL)</div>
+              <div className="points-grid">
+                <Field label="Punto 1" type="number" value={measurement.sample1} onChange={(value) => setMeasurement({ ...measurement, sample1: value })} />
+                <Field label="Punto 2" type="number" value={measurement.sample2} onChange={(value) => setMeasurement({ ...measurement, sample2: value })} />
+                <Field label="Punto 3" type="number" value={measurement.sample3} onChange={(value) => setMeasurement({ ...measurement, sample3: value })} />
+              </div>
+              <div className="vol-result">
+                <span>Volumen total</span>
+                <strong>{preview.totalVolume.toFixed(2)} mL</strong>
+              </div>
+            </div>
+
+            <div className="tasa-card">
+              <div>
+                <div className="tasa-label">Tasa calculada</div>
+                <div className="tasa-value">{preview.irrigationRate.toFixed(2)}</div>
+                <div className="tasa-unit">L/h</div>
+                <div className="tasa-formula">Promedio × 0,4</div>
+              </div>
+              <div className="tasa-icon">TR</div>
+            </div>
+
+            {preview.irrigationRate === 0 && (
+              <div className="card observacion-card">
+                <div className="card-title">Observación requerida: tasa de riego igual a 0</div>
+                <textarea value={measurement.observation} onChange={(event) => setMeasurement({ ...measurement, observation: event.target.value })} placeholder="Ingrese observación operacional" />
+              </div>
+            )}
+
+            {preview.irrigationRate !== 0 && (
+              <div className="card">
+                <div className="card-title">Observación operacional</div>
+                <textarea value={measurement.observation} onChange={(event) => setMeasurement({ ...measurement, observation: event.target.value })} placeholder="Opcional" />
+              </div>
+            )}
+
+            <button className="btn-save" type="submit">Guardar registro</button>
+            <button className="btn-secondary" type="button" onClick={() => setMeasurement(initialMeasurement)}>Limpiar formulario</button>
+          </form>
+        )}
+
+        {tab === 'records' && <LocalMeasurements records={records} />}
+      </div>
+    </section>
   );
 }
 
 function Field({ label, value, onChange, type = 'text' }) {
   return (
-    <label className="block">
-      <span className="text-xs font-bold uppercase tracking-wide text-slate-600">{label}</span>
-      <input
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-mantos-blue"
-      />
-    </label>
+    <div className="form-group">
+      <label>{label}</label>
+      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+    </div>
   );
 }
 
-function MeasurementPreview({ measurement }) {
-  const { totalVolume, averageVolume, irrigationRate } = calculatePreview(measurement);
+function LocalMeasurements({ records }) {
+  if (!records.length) {
+    return <div className="empty"><div className="empty-icon">Sin registros</div><p>No hay registros disponibles.</p></div>;
+  }
+  const avg = records.reduce((sum, item) => sum + Number(item.irrigationRate || 0), 0) / records.length;
+  const max = Math.max(...records.map((item) => Number(item.irrigationRate || 0)));
   return (
-    <div className="mt-4 rounded-xl bg-mantos-pale p-4">
-      <div className="grid grid-cols-3 gap-3 text-center">
-        <PreviewItem label="Total" value={`${totalVolume.toFixed(2)} mL`} />
-        <PreviewItem label="Promedio" value={`${averageVolume.toFixed(2)} mL`} />
-        <PreviewItem label="Tasa" value={`${irrigationRate.toFixed(2)} L/h`} />
+    <>
+      <div className="stats-grid">
+        <Stat label="Registros" value={records.length} />
+        <Stat label="Promedio" value={avg.toFixed(1)} />
+        <Stat label="Máxima" value={max.toFixed(1)} />
       </div>
+      {records.map((record) => (
+        <article className="record-item" key={record.id}>
+          <div className="rec-header">
+            <div>
+              <strong>Pila {record.pile} · Fase {record.phase} · Módulo {record.module}</strong>
+              <p>{formatDate(record.createdAt)} · {record.operatorName}</p>
+            </div>
+            <span className={`sync-pill ${record.syncStatus === 'synced' ? 'synced' : ''}`}>{record.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
+          </div>
+          <div className="record-tasa">{record.irrigationRate} L/h</div>
+          {record.observation ? <p className="record-note">{record.observation}</p> : null}
+        </article>
+      ))}
+    </>
+  );
+}
+
+function Stat({ label, value }) {
+  return (
+    <div className="stat-box">
+      <strong>{value}</strong>
+      <span>{label}</span>
     </div>
   );
 }
 
-function calculatePreview(values) {
-  const samples = [values.sample1, values.sample2, values.sample3].filter((value) => value !== '').map(Number);
-  const totalVolume = samples.reduce((sum, value) => sum + value, 0);
-  const averageVolume = samples.length ? totalVolume / samples.length : 0;
-  return { totalVolume, averageVolume, irrigationRate: averageVolume * 0.4 };
-}
-
-function PreviewItem({ label, value }) {
+function ConductionScreen({ operator, pendingCount, isOnline, documents, files, setFiles, onBack, onSubmit, onTheme, theme }) {
   return (
-    <div>
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-1 font-black text-mantos-navy">{value}</p>
-    </div>
+    <section>
+      <Header title="Conducción" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <div className="content">
+        <form onSubmit={onSubmit}>
+          <label className="cond-upload-card" htmlFor="cond-input">
+            <div className="cond-upload-icon">DC</div>
+            <div className="cond-upload-title">Cargar documentación</div>
+            <div className="cond-upload-desc">Seleccione una o más imágenes. Se guardan offline hasta sincronizar.</div>
+            <input id="cond-input" type="file" accept="image/*" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} />
+          </label>
+          {files.length > 0 && <p className="selected-files">{files.length} archivo(s) seleccionado(s).</p>}
+          <button className="btn-save" type="submit">Guardar documentación</button>
+        </form>
+        <LocalDocuments documents={documents} />
+      </div>
+    </section>
   );
 }
 
 function LocalDocuments({ documents }) {
-  if (!documents.length) return null;
   return (
-    <div className="mt-5 rounded-xl bg-white p-5 shadow">
-      <SectionTitle title="Documentación local" subtitle="Historial del dispositivo." />
-      <div className="grid gap-3 md:grid-cols-2">
+    <div className="card">
+      <div className="cond-section-title">
+        <span>Documentación local</span>
+        <strong>{documents.length}</strong>
+      </div>
+      {!documents.length && <div className="cond-empty-hint">No hay documentos cargados.</div>}
+      <div className="cond-gallery">
         {documents.map((doc) => (
-          <article key={doc.id} className="rounded-lg border border-slate-200 p-3">
-            <img src={doc.dataUrl} alt={doc.fileName} className="h-32 w-full rounded-lg object-cover" />
-            <p className="mt-2 text-sm font-bold text-mantos-navy">{doc.fileName}</p>
-            <p className="text-xs text-slate-500">{doc.status} · {doc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</p>
+          <article className="cond-thumb" key={doc.id}>
+            <img src={doc.dataUrl} alt={doc.fileName} />
+            <div className="cond-thumb-info">
+              <strong>{doc.fileName}</strong>
+              <span>{formatDate(doc.createdAt)} · {doc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
+            </div>
           </article>
         ))}
       </div>
@@ -541,7 +651,7 @@ function LocalDocuments({ documents }) {
   );
 }
 
-function Glossary() {
+function GlossaryScreen({ operator, pendingCount, isOnline, onBack, onTheme, theme }) {
   const [mode, setMode] = useState('list');
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
@@ -556,114 +666,142 @@ function Glossary() {
   }
 
   return (
-    <section className="mx-auto max-w-3xl px-4 pb-10">
-      <div className="rounded-xl bg-white p-5 shadow">
-        <SectionTitle title="Glosario técnico" subtitle="Consulta conceptos o utiliza el modo de prueba." />
-        <input
-          value={query}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setIndex(0);
-            setRevealed(false);
-          }}
-          className="w-full rounded-lg border border-slate-300 px-3 py-3 outline-none focus:border-mantos-blue"
-          placeholder="Buscar término"
-        />
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button className={`rounded-lg px-3 py-3 font-bold ${mode === 'list' ? 'bg-mantos-navy text-white' : 'bg-slate-100 text-slate-700'}`} type="button" onClick={() => setMode('list')}>
-            Listado
-          </button>
-          <button className={`rounded-lg px-3 py-3 font-bold ${mode === 'quiz' ? 'bg-mantos-navy text-white' : 'bg-slate-100 text-slate-700'}`} type="button" onClick={() => setMode('quiz')}>
-            Prueba
-          </button>
+    <section>
+      <Header title="Glosario de Términos" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <div className="content">
+        <div className="card">
+          <div className="card-title">Búsqueda</div>
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setIndex(0);
+              setRevealed(false);
+            }}
+            placeholder="Buscar término"
+          />
         </div>
+        <div className="glosario-mode-tabs">
+          <button className={mode === 'list' ? 'active' : ''} type="button" onClick={() => setMode('list')}>Listado</button>
+          <button className={mode === 'quiz' ? 'active' : ''} type="button" onClick={() => setMode('quiz')}>Prueba</button>
+        </div>
+
+        {mode === 'list' && terms.map((term) => <TermCard key={term.id} term={term} />)}
+
+        {mode === 'quiz' && current && (
+          <>
+            <button className={`quiz-card ${revealed ? 'revealed' : ''}`} type="button" onClick={() => setRevealed(true)}>
+              <div className="quiz-label">Término {index + 1} de {terms.length}</div>
+              <div className="quiz-title">{current.title}</div>
+              {revealed ? <p className="quiz-answer">{current.definition}</p> : <p className="quiz-hint">Presione la tarjeta para revelar la respuesta.</p>}
+            </button>
+            <div className="quiz-actions">
+              <button type="button" onClick={() => next(-1)}>Anterior</button>
+              <button type="button" onClick={() => next(1)}>Siguiente</button>
+            </div>
+          </>
+        )}
       </div>
-
-      {mode === 'list' && (
-        <div className="mt-4 space-y-3">
-          {terms.map((term) => (
-            <details key={term.id} className="rounded-xl bg-white p-4 shadow">
-              <summary className="cursor-pointer font-bold text-mantos-navy">{term.title}</summary>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{term.definition}</p>
-              <span className="mt-3 inline-block rounded-full bg-mantos-pale px-3 py-1 text-xs font-bold text-mantos-blue">{term.category}</span>
-            </details>
-          ))}
-        </div>
-      )}
-
-      {mode === 'quiz' && current && (
-        <div className="mt-4">
-          <button className="w-full rounded-xl bg-white p-6 text-left shadow" type="button" onClick={() => setRevealed(true)}>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Término {index + 1} de {terms.length}</p>
-            <p className="mt-2 text-2xl font-black text-mantos-navy">{current.title}</p>
-            {revealed ? <p className="mt-4 border-t border-slate-200 pt-4 text-sm leading-6 text-slate-600">{current.definition}</p> : <p className="mt-4 text-sm text-slate-500">Presione la tarjeta para revelar la respuesta.</p>}
-          </button>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button className="rounded-lg bg-white px-3 py-3 font-bold text-slate-700 shadow" type="button" onClick={() => next(-1)}>Anterior</button>
-            <button className="rounded-lg bg-white px-3 py-3 font-bold text-slate-700 shadow" type="button" onClick={() => next(1)}>Siguiente</button>
-          </div>
-        </div>
-      )}
     </section>
   );
 }
 
-function AdminPanel({ canUseSupabase, session, adminEmail, adminPassword, setAdminEmail, setAdminPassword, onLogin, onLogout, onRefresh, measurements, documents, onStatusChange }) {
+function TermCard({ term }) {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="mx-auto max-w-5xl px-4 pb-10">
-      {!session && (
-        <form className="mx-auto max-w-md rounded-xl bg-white p-5 shadow" onSubmit={onLogin}>
-          <SectionTitle title="Panel administrador" subtitle="Acceso protegido mediante Supabase Auth." />
-          {!canUseSupabase && <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">Configure las variables de entorno de Supabase para habilitar el login.</p>}
-          <Field label="Correo" type="email" value={adminEmail} onChange={setAdminEmail} />
-          <div className="mt-3">
-            <Field label="Contraseña" type="password" value={adminPassword} onChange={setAdminPassword} />
-          </div>
-          <button className="mt-4 w-full rounded-lg bg-mantos-blue px-4 py-3 font-bold text-white" type="submit">Ingresar</button>
-        </form>
-      )}
-
-      {session && (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-5 shadow">
-            <div>
-              <h2 className="text-lg font-black text-mantos-ink">Panel administrador</h2>
-              <p className="text-sm text-slate-500">{session.user.email}</p>
-            </div>
-            <div className="flex gap-2">
-              <button className="rounded-lg bg-mantos-blue px-4 py-3 font-bold text-white" type="button" onClick={onRefresh}>Actualizar</button>
-              <button className="rounded-lg border border-slate-300 px-4 py-3 font-bold text-slate-700" type="button" onClick={onLogout}>Salir</button>
-            </div>
-          </div>
-          <AdminMeasurements rows={measurements} />
-          <AdminDocuments rows={documents} onStatusChange={onStatusChange} />
+    <article className={`term-card ${open ? 'open' : ''}`}>
+      <button className="term-card-head" type="button" onClick={() => setOpen((value) => !value)}>
+        <span className="term-card-title">{term.title}</span>
+        <span className="term-card-chevron">⌄</span>
+      </button>
+      <div className="term-card-body">
+        <div className="term-card-body-inner">
+          <p>{term.definition}</p>
+          <span className="term-card-cat">{term.category}</span>
         </div>
-      )}
+      </div>
+    </article>
+  );
+}
+
+function AdminScreen({
+  operator,
+  pendingCount,
+  isOnline,
+  canUseSupabase,
+  session,
+  adminEmail,
+  adminPassword,
+  setAdminEmail,
+  setAdminPassword,
+  onLogin,
+  onLogout,
+  onRefresh,
+  measurements,
+  documents,
+  onBack,
+  onTheme,
+  theme,
+}) {
+  return (
+    <section>
+      <Header title="Panel administrador" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <div className="content">
+        {!session && (
+          <form className="login-card admin-card" onSubmit={onLogin}>
+            <div className="card-title">Acceso protegido</div>
+            {!canUseSupabase && <p className="admin-warning">Configure las variables de entorno de Supabase para habilitar el login.</p>}
+            <label htmlFor="admin-email">Correo</label>
+            <input id="admin-email" type="email" value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} />
+            <label htmlFor="admin-password">Contraseña</label>
+            <input id="admin-password" type="password" value={adminPassword} onChange={(event) => setAdminPassword(event.target.value)} />
+            <button className="btn-login" type="submit">Ingresar</button>
+          </form>
+        )}
+
+        {session && (
+          <>
+            <div className="card admin-toolbar">
+              <div>
+                <div className="card-title">Sesión administrativa</div>
+                <strong>{session.user.email}</strong>
+              </div>
+              <div className="admin-actions">
+                <button className="btn-save compact" type="button" onClick={onRefresh}>Actualizar</button>
+                <button className="btn-secondary compact" type="button" onClick={onLogout}>Salir</button>
+              </div>
+            </div>
+            <AdminMeasurements rows={measurements} />
+            <AdminDocuments rows={documents} />
+          </>
+        )}
+      </div>
     </section>
   );
 }
 
 function AdminMeasurements({ rows }) {
   return (
-    <div className="rounded-xl bg-white p-5 shadow">
-      <SectionTitle title="Historial de tasas de riego" subtitle="Registros sincronizados desde terreno." />
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
-          <thead className="text-xs uppercase text-slate-500">
+    <div className="card">
+      <div className="card-title">Historial de tasas de riego</div>
+      <div className="table-wrap">
+        <table>
+          <thead>
             <tr>
-              <th className="py-2 pr-4">Fecha</th>
-              <th className="py-2 pr-4">Operador</th>
-              <th className="py-2 pr-4">Ubicación</th>
-              <th className="py-2 pr-4">Tasa</th>
+              <th>Fecha</th>
+              <th>Operador</th>
+              <th>Ubicación</th>
+              <th>Tasa</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-t border-slate-200">
-                <td className="py-2 pr-4">{formatDate(row.measured_at)}</td>
-                <td className="py-2 pr-4">{row.operator_name}</td>
-                <td className="py-2 pr-4">Pila {row.pile} · Fase {row.phase} · Módulo {row.module}</td>
-                <td className="py-2 pr-4 font-bold text-mantos-navy">{row.irrigation_rate_lh} L/h</td>
+              <tr key={row.id}>
+                <td>{formatDate(row.measured_at)}</td>
+                <td>{row.operator_name}</td>
+                <td>Pila {row.pile} · Fase {row.phase} · Módulo {row.module}</td>
+                <td><strong>{row.irrigation_rate_lh} L/h</strong></td>
               </tr>
             ))}
           </tbody>
@@ -673,21 +811,17 @@ function AdminMeasurements({ rows }) {
   );
 }
 
-function AdminDocuments({ rows, onStatusChange }) {
+function AdminDocuments({ rows }) {
   return (
-    <div className="rounded-xl bg-white p-5 shadow">
-      <SectionTitle title="Documentación de conducción" subtitle="Conductores, fecha de carga y estatus documental." />
-      <div className="grid gap-3 md:grid-cols-2">
+    <div className="card">
+      <div className="card-title">Documentación de conducción</div>
+      {!rows.length && <div className="cond-empty-hint">No hay documentos sincronizados.</div>}
+      <div className="admin-doc-grid">
         {rows.map((doc) => (
-          <article key={doc.id} className="rounded-xl border border-slate-200 p-3">
-            {doc.signedUrl ? <img src={doc.signedUrl} alt={doc.file_name} className="h-40 w-full rounded-lg object-cover" /> : null}
-            <p className="mt-3 font-bold text-mantos-navy">{doc.driver_name}</p>
-            <p className="text-xs text-slate-500">{formatDate(doc.uploaded_at)} · {doc.file_name}</p>
-            <select className="mt-3 w-full rounded-lg border border-slate-300 px-3 py-2" value={doc.status} onChange={(event) => onStatusChange(doc.id, event.target.value)}>
-              {statusOptions.map((status) => (
-                <option key={status} value={status}>{status}</option>
-              ))}
-            </select>
+          <article key={doc.id} className="admin-doc-card">
+            {doc.signedUrl ? <img src={doc.signedUrl} alt={doc.file_name} /> : null}
+            <strong>{doc.driver_name}</strong>
+            <span>{formatDate(doc.uploaded_at)} · {doc.file_name}</span>
           </article>
         ))}
       </div>

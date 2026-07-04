@@ -14,7 +14,7 @@ Aplicacion operacional para registrar tasas de riego, gestionar documentacion de
 
 - Acceso operativo offline desde la pantalla principal.
 - Registro de mediciones de tasa de riego con cola local.
-- Carga de documentacion de conduccion con campo de estatus.
+- Carga de documentacion de conduccion con imagenes sincronizables.
 - Sincronizacion hacia Supabase cuando el dispositivo recupera conexion.
 - Panel administrador protegido por login.
 - Historial administrativo de tasas de riego.
