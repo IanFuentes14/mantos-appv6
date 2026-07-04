@@ -81,6 +81,7 @@ function calculateMeasurement(values) {
 
 function App() {
   const [operator, setOperator] = useState(getOperatorName());
+  const [accessRole, setAccessRole] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [session, setSession] = useState(null);
   const [screen, setScreen] = useState('login');
@@ -98,6 +99,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem('mantos_theme') || 'light');
 
   const canUseSupabase = isSupabaseConfigured && supabase;
+  const activeOperator = accessRole === 'admin' ? 'Administrador' : operator;
   const pendingCount = useMemo(
     () => measurements.filter((item) => item.syncStatus !== 'synced').length + documents.filter((item) => item.syncStatus !== 'synced').length,
     [measurements, documents],
@@ -227,12 +229,15 @@ function App() {
       return;
     }
     setMessage('Ingreso administrativo correcto.');
-    setScreen('admin');
+    setAccessRole('admin');
+    setScreen('menu');
   }
 
   async function handleAdminLogout() {
     if (canUseSupabase) await supabase.auth.signOut();
     setSession(null);
+    setAccessRole(null);
+    setScreen('login');
   }
 
   function enterOffline(event) {
@@ -242,6 +247,7 @@ function App() {
       return;
     }
     setOperatorName(operator.trim());
+    setAccessRole('user');
     setScreen('menu');
   }
 
@@ -258,7 +264,7 @@ function App() {
     }
     const record = {
       id: createId(),
-      operatorName: operator,
+      operatorName: activeOperator,
       pile: measurement.pile,
       phase: measurement.phase,
       module: measurement.module,
@@ -292,8 +298,8 @@ function App() {
       const dataUrl = await fileToDataUrl(file);
       created.push({
         id: createId(),
-        driverName: operator,
-        operatorName: operator,
+        driverName: activeOperator,
+        operatorName: activeOperator,
         fileName: file.name || 'documento.jpg',
         mimeType: file.type || 'image/jpeg',
         dataUrl,
@@ -335,7 +341,8 @@ function App() {
 
       {screen === 'menu' && (
         <MenuScreen
-          operator={operator}
+          operator={activeOperator}
+          accessRole={accessRole}
           pendingCount={pendingCount}
           isOnline={isOnline}
           syncing={syncing}
@@ -350,7 +357,7 @@ function App() {
 
       {screen === 'measurement' && (
         <MeasurementScreen
-          operator={operator}
+          operator={activeOperator}
           pendingCount={pendingCount}
           isOnline={isOnline}
           measurement={measurement}
@@ -367,7 +374,7 @@ function App() {
 
       {screen === 'conduction' && (
         <ConductionScreen
-          operator={operator}
+          operator={activeOperator}
           pendingCount={pendingCount}
           isOnline={isOnline}
           documents={documents}
@@ -382,7 +389,7 @@ function App() {
 
       {screen === 'glossary' && (
         <GlossaryScreen
-          operator={operator}
+          operator={activeOperator}
           pendingCount={pendingCount}
           isOnline={isOnline}
           onBack={() => setScreen('menu')}
@@ -391,9 +398,9 @@ function App() {
         />
       )}
 
-      {screen === 'admin' && (
+      {screen === 'admin' && accessRole === 'admin' && (
         <AdminScreen
-          operator={operator}
+          operator={activeOperator}
           pendingCount={pendingCount}
           isOnline={isOnline}
           canUseSupabase={canUseSupabase}
@@ -407,7 +414,7 @@ function App() {
           onRefresh={loadAdminData}
           measurements={adminMeasurements}
           documents={adminDocuments}
-          onBack={() => setScreen(operator ? 'menu' : 'login')}
+          onBack={() => setScreen(accessRole === 'admin' ? 'menu' : 'login')}
           onTheme={toggleTheme}
           theme={theme}
         />
@@ -512,7 +519,7 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, them
   );
 }
 
-function MenuScreen({ operator, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, theme }) {
+function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, theme }) {
   return (
     <section id="menu-screen">
       <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} theme={theme} />
@@ -524,7 +531,9 @@ function MenuScreen({ operator, pendingCount, isOnline, syncing, measurements, d
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
         <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
         <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
-        <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
+        {accessRole === 'admin' && (
+          <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
+        )}
         <button className="btn-save menu-sync" type="button" onClick={onSync} disabled={syncing}>
           {syncing ? 'Sincronizando...' : `Sincronizar datos pendientes (${pendingCount})`}
         </button>
