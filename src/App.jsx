@@ -5,7 +5,6 @@ import {
   addQueuedMeasurement,
   dataUrlToBlob,
   fileToDataUrl,
-  getOperatorName,
   getQueuedDocuments,
   getQueuedMeasurements,
   saveQueuedDocuments,
@@ -71,6 +70,11 @@ function buildMeasurementPayload(record) {
   };
 }
 
+function getDocumentStoragePath(record) {
+  if (record.filePath) return record.filePath;
+  return `${record.driverName || 'sin-conductor'}/${record.createdAt.slice(0, 10)}/${record.id}-${record.fileName}`;
+}
+
 function calculateMeasurement(values) {
   const samples = [values.sample1, values.sample2, values.sample3].filter((value) => value !== '').map(Number);
   const totalVolume = samples.reduce((sum, value) => sum + value, 0);
@@ -80,7 +84,7 @@ function calculateMeasurement(values) {
 }
 
 function App() {
-  const [operator, setOperator] = useState(getOperatorName());
+  const [operator, setOperator] = useState('');
   const [accessRole, setAccessRole] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [session, setSession] = useState(null);
@@ -167,7 +171,7 @@ function App() {
           continue;
         }
         const blob = dataUrlToBlob(record.dataUrl);
-        const storagePath = `${record.driverName || 'sin-conductor'}/${record.createdAt.slice(0, 10)}/${record.id}-${record.fileName}`;
+        const storagePath = getDocumentStoragePath(record);
         const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
           contentType: record.mimeType,
           upsert: true,
@@ -177,13 +181,14 @@ function App() {
           continue;
         }
         const insert = await supabase.from('conduction_documents').insert({
+          id: record.id,
           driver_name: record.driverName,
           operator_name: record.operatorName,
           file_name: record.fileName,
           file_path: storagePath,
           uploaded_at: record.createdAt,
         });
-        nextDocuments.push(insert.error ? { ...record, syncStatus: 'pending', syncError: insert.error.message } : { ...record, syncStatus: 'synced', syncError: '' });
+        nextDocuments.push(insert.error ? { ...record, syncStatus: 'pending', syncError: insert.error.message } : { ...record, filePath: storagePath, syncStatus: 'synced', syncError: '' });
       }
 
       setMeasurements(nextMeasurements);
@@ -233,11 +238,15 @@ function App() {
     setScreen('menu');
   }
 
-  async function handleAdminLogout() {
-    if (canUseSupabase) await supabase.auth.signOut();
+  async function closeSession() {
+    if (accessRole === 'admin' && canUseSupabase) await supabase.auth.signOut();
     setSession(null);
     setAccessRole(null);
+    setOperator('');
+    setAdminEmail('');
+    setAdminPassword('');
     setScreen('login');
+    setMessage('Sesión cerrada.');
   }
 
   function enterOffline(event) {
@@ -315,6 +324,37 @@ function App() {
     setMessage('Documentación guardada localmente.');
   }
 
+  async function deleteDocument(record) {
+    if (!canUseSupabase || record.syncStatus !== 'synced') {
+      const next = documents.filter((doc) => doc.id !== record.id);
+      setDocuments(next);
+      saveQueuedDocuments(next);
+      setMessage('Documento eliminado del dispositivo.');
+      return;
+    }
+    if (!navigator.onLine) {
+      setMessage('Se requiere conexión para eliminar un documento ya sincronizado.');
+      return;
+    }
+
+    const filePath = getDocumentStoragePath(record);
+    const [deleteById, deleteByPath, storageResult] = await Promise.all([
+      supabase.from('conduction_documents').delete().eq('id', record.id),
+      supabase.from('conduction_documents').delete().eq('file_path', filePath),
+      supabase.storage.from(DOCUMENT_BUCKET).remove([filePath]),
+    ]);
+
+    if (deleteById.error || deleteByPath.error || storageResult.error) {
+      setMessage(deleteById.error?.message || deleteByPath.error?.message || storageResult.error?.message || 'No se pudo eliminar el documento en Supabase.');
+      return;
+    }
+
+    const next = documents.filter((doc) => doc.id !== record.id);
+    setDocuments(next);
+    saveQueuedDocuments(next);
+    setMessage('Documento eliminado del dispositivo y de Supabase.');
+  }
+
   function toggleTheme() {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }
@@ -335,6 +375,7 @@ function App() {
           onAdminLogin={handleAdminLogin}
           canUseSupabase={canUseSupabase}
           onTheme={toggleTheme}
+          onLogout={closeSession}
           theme={theme}
         />
       )}
@@ -351,6 +392,7 @@ function App() {
           onNavigate={setScreen}
           onSync={syncPending}
           onTheme={toggleTheme}
+          onLogout={closeSession}
           theme={theme}
         />
       )}
@@ -368,6 +410,7 @@ function App() {
           onBack={() => setScreen('menu')}
           onSubmit={saveMeasurement}
           onTheme={toggleTheme}
+          onLogout={closeSession}
           theme={theme}
         />
       )}
@@ -382,7 +425,9 @@ function App() {
           setFiles={setDocumentFiles}
           onBack={() => setScreen('menu')}
           onSubmit={saveDocuments}
+          onDeleteDocument={deleteDocument}
           onTheme={toggleTheme}
+          onLogout={closeSession}
           theme={theme}
         />
       )}
@@ -394,6 +439,7 @@ function App() {
           isOnline={isOnline}
           onBack={() => setScreen('menu')}
           onTheme={toggleTheme}
+          onLogout={closeSession}
           theme={theme}
         />
       )}
@@ -410,7 +456,7 @@ function App() {
           setAdminEmail={setAdminEmail}
           setAdminPassword={setAdminPassword}
           onLogin={handleAdminLogin}
-          onLogout={handleAdminLogout}
+          onLogout={closeSession}
           onRefresh={loadAdminData}
           measurements={adminMeasurements}
           documents={adminDocuments}
@@ -445,12 +491,11 @@ function LoginScreen({
         <p>Seleccione el tipo de acceso para continuar con Mantos App.</p>
       </div>
       <div className="login-logo-wrap">
-        <div className="logo-fallback">MG</div>
+        <img className="login-logo" src="/mantos_group_logo.jpg" alt="Mantos Group" />
       </div>
       <div className="login-divider" />
       <div className="login-brand">
         <div className="login-company-name">Mantos Group</div>
-        <div className="login-app-title">Medición de Tasa de Riego</div>
       </div>
 
       {mode === 'choice' && (
@@ -495,7 +540,7 @@ function LoginScreen({
   );
 }
 
-function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, theme }) {
+function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
   return (
     <header className="app-header">
       <div className="header-top">
@@ -507,10 +552,11 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, them
               <span className="theme-toggle-mark" />
               {theme === 'dark' ? 'Claro' : 'Oscuro'}
             </button>
-            <div className="user-badge">
+            <button className="user-badge" type="button" onClick={onLogout} title="Cerrar sesión">
               <span className="user-avatar">{initials(operator)}</span>
               <span>{operator || 'Operador'}</span>
-            </div>
+              <span className="logout-label">Cerrar sesión</span>
+            </button>
           </div>
           <span className="header-subtitle">{isOnline ? 'Con conexión' : 'Sin conexión'} · {pendingCount} pendiente(s)</span>
         </div>
@@ -519,10 +565,10 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, them
   );
 }
 
-function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, theme }) {
+function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, onLogout, theme }) {
   return (
     <section id="menu-screen">
-      <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} theme={theme} />
+      <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="menu-welcome">
         <p>Bienvenido, {operator}</p>
         <span>Seleccione el módulo de trabajo.</span>
@@ -555,11 +601,11 @@ function MenuCard({ icon, title, desc, onClick, alt, brown }) {
   );
 }
 
-function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onBack, onSubmit, onTheme, theme }) {
+function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onBack, onSubmit, onTheme, onLogout, theme }) {
   const preview = calculateMeasurement(measurement);
   return (
     <section>
-      <Header title="Tasa de Riego" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <Header title="Tasa de Riego" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="tabs">
         <button className={`tab ${tab === 'form' ? 'active' : ''}`} type="button" onClick={() => setTab('form')}>Formulario</button>
         <button className={`tab ${tab === 'records' ? 'active' : ''}`} type="button" onClick={() => setTab('records')}>Historial</button>
@@ -675,10 +721,10 @@ function Stat({ label, value }) {
   );
 }
 
-function ConductionScreen({ operator, pendingCount, isOnline, documents, files, setFiles, onBack, onSubmit, onTheme, theme }) {
+function ConductionScreen({ operator, pendingCount, isOnline, documents, files, setFiles, onBack, onSubmit, onDeleteDocument, onTheme, onLogout, theme }) {
   return (
     <section>
-      <Header title="Conducción" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <Header title="Conducción" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="content">
         <form onSubmit={onSubmit}>
           <label className="cond-upload-card" htmlFor="cond-input">
@@ -690,13 +736,13 @@ function ConductionScreen({ operator, pendingCount, isOnline, documents, files, 
           {files.length > 0 && <p className="selected-files">{files.length} archivo(s) seleccionado(s).</p>}
           <button className="btn-save" type="submit">Guardar documentación</button>
         </form>
-        <LocalDocuments documents={documents} />
+        <LocalDocuments documents={documents} onDelete={onDeleteDocument} />
       </div>
     </section>
   );
 }
 
-function LocalDocuments({ documents }) {
+function LocalDocuments({ documents, onDelete }) {
   return (
     <div className="card">
       <div className="cond-section-title">
@@ -711,6 +757,7 @@ function LocalDocuments({ documents }) {
             <div className="cond-thumb-info">
               <strong>{doc.fileName}</strong>
               <span>{formatDate(doc.createdAt)} · {doc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
+              <button className="btn-delete-doc" type="button" onClick={() => onDelete(doc)}>Eliminar imagen</button>
             </div>
           </article>
         ))}
@@ -719,7 +766,7 @@ function LocalDocuments({ documents }) {
   );
 }
 
-function GlossaryScreen({ operator, pendingCount, isOnline, onBack, onTheme, theme }) {
+function GlossaryScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
   const [mode, setMode] = useState('list');
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
@@ -735,7 +782,7 @@ function GlossaryScreen({ operator, pendingCount, isOnline, onBack, onTheme, the
 
   return (
     <section>
-      <Header title="Glosario de Términos" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <Header title="Glosario de Términos" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="content">
         <div className="card">
           <div className="card-title">Búsqueda</div>
@@ -814,7 +861,7 @@ function AdminScreen({
 }) {
   return (
     <section>
-      <Header title="Panel administrador" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} theme={theme} />
+      <Header title="Panel administrador" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="content">
         {!session && (
           <form className="login-card admin-card" onSubmit={onLogin}>

@@ -43,6 +43,7 @@ grant insert on public.conduction_documents to anon, authenticated;
 grant select on public.conduction_documents to authenticated;
 revoke update on public.conduction_documents from anon;
 revoke update on public.conduction_documents from authenticated;
+grant delete on public.conduction_documents to anon, authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
 create policy "Public can insert irrigation measurements"
@@ -89,6 +90,16 @@ for select
 to authenticated
 using (true);
 
+drop policy if exists "Public can delete conduction documents" on public.conduction_documents;
+create policy "Public can delete conduction documents"
+on public.conduction_documents
+for delete
+to anon, authenticated
+using (
+  (select auth.role()) = 'authenticated'
+  or uploaded_at >= now() - interval '7 days'
+);
+
 drop policy if exists "Authenticated users can update conduction document status" on public.conduction_documents;
 
 insert into storage.buckets (id, name, public)
@@ -116,3 +127,16 @@ for update
 to authenticated
 using (bucket_id = 'conduction-documents')
 with check (bucket_id = 'conduction-documents');
+
+drop policy if exists "Public can delete conduction document files" on storage.objects;
+create policy "Public can delete conduction document files"
+on storage.objects
+for delete
+to anon, authenticated
+using (
+  bucket_id = 'conduction-documents'
+  and (
+    (select auth.role()) = 'authenticated'
+    or created_at >= now() - interval '7 days'
+  )
+);

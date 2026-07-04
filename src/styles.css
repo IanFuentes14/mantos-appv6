@@ -101,8 +101,8 @@ button {
   position: absolute;
   inset: 0 0 auto;
   height: 34%;
-  background: linear-gradient(180deg, rgba(192, 57, 43, 0.72), rgba(30, 58, 95, 0));
-  opacity: 0.72;
+  background: linear-gradient(180deg, rgba(126, 179, 245, 0.46), rgba(30, 58, 95, 0));
+  opacity: 0.82;
 }
 
 #login-screen::after {
@@ -148,22 +148,17 @@ button {
 }
 
 .login-logo-wrap {
-  width: 86px;
-  margin-bottom: 12px;
+  width: 176px;
+  margin-bottom: 14px;
   border-radius: 24px;
   overflow: hidden;
-  border: 2px solid rgba(255, 255, 255, 0.78);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
-.logo-fallback {
-  display: grid;
-  min-height: 78px;
-  place-items: center;
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-  font-size: 25px;
-  font-weight: 900;
+.login-logo {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .login-divider {
@@ -215,12 +210,12 @@ button {
 .access-button {
   border-radius: 16px;
   margin-bottom: 14px;
-  background: linear-gradient(180deg, #d24b54 0%, #8d2146 100%);
+  background: linear-gradient(180deg, #5b8fd4 0%, #255f9f 100%);
   box-shadow: 0 8px 20px rgba(7, 17, 31, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .access-button.secondary-gradient {
-  background: linear-gradient(180deg, #bf3b51 0%, #6e204b 100%);
+  background: linear-gradient(180deg, #3971b8 0%, #1e3a5f 100%);
 }
 
 .login-form-title {
@@ -395,11 +390,18 @@ textarea:focus {
   align-items: center;
   gap: 6px;
   padding: 5px 10px 5px 8px;
+  border: none;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   font-size: 12px;
   font-weight: 500;
+}
+
+.logout-label {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .user-avatar {
@@ -815,6 +817,18 @@ textarea:focus {
   color: var(--text-muted);
   font-size: 11px;
   line-height: 1.35;
+}
+
+.btn-delete-doc {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(192, 57, 43, 0.35);
+  border-radius: var(--radius-sm);
+  margin-top: 10px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .glosario-mode-tabs {
