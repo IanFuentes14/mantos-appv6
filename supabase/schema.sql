@@ -17,6 +17,8 @@ create table if not exists public.irrigation_measurements (
   average_volume_ml numeric not null default 0,
   irrigation_rate_lh numeric not null default 0,
   observation text,
+  delete_token text,
+  owner_id uuid default auth.uid(),
   measured_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -27,6 +29,8 @@ create table if not exists public.conduction_documents (
   operator_name text,
   file_name text not null,
   file_path text not null,
+  delete_token text,
+  owner_id uuid default auth.uid(),
   uploaded_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -39,11 +43,12 @@ alter table public.conduction_documents enable row level security;
 
 grant insert on public.irrigation_measurements to anon, authenticated;
 grant select on public.irrigation_measurements to authenticated;
+grant delete on public.irrigation_measurements to authenticated;
 grant insert on public.conduction_documents to anon, authenticated;
 grant select on public.conduction_documents to authenticated;
 revoke update on public.conduction_documents from anon;
 revoke update on public.conduction_documents from authenticated;
-grant delete on public.conduction_documents to anon, authenticated;
+grant delete on public.conduction_documents to authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
 create policy "Public can insert irrigation measurements"
@@ -71,6 +76,14 @@ for select
 to authenticated
 using (true);
 
+drop policy if exists "Public can delete irrigation measurements" on public.irrigation_measurements;
+drop policy if exists "Operator can delete own irrigation measurements" on public.irrigation_measurements;
+create policy "Operator can delete own irrigation measurements"
+on public.irrigation_measurements
+for delete
+to authenticated
+using (owner_id = (select auth.uid()));
+
 drop policy if exists "Public can insert conduction documents" on public.conduction_documents;
 create policy "Public can insert conduction documents"
 on public.conduction_documents
@@ -91,14 +104,12 @@ to authenticated
 using (true);
 
 drop policy if exists "Public can delete conduction documents" on public.conduction_documents;
-create policy "Public can delete conduction documents"
+drop policy if exists "Operator can delete own conduction documents" on public.conduction_documents;
+create policy "Operator can delete own conduction documents"
 on public.conduction_documents
 for delete
-to anon, authenticated
-using (
-  (select auth.role()) = 'authenticated'
-  or uploaded_at >= now() - interval '7 days'
-);
+to authenticated
+using (owner_id = (select auth.uid()));
 
 drop policy if exists "Authenticated users can update conduction document status" on public.conduction_documents;
 
@@ -129,14 +140,12 @@ using (bucket_id = 'conduction-documents')
 with check (bucket_id = 'conduction-documents');
 
 drop policy if exists "Public can delete conduction document files" on storage.objects;
-create policy "Public can delete conduction document files"
+drop policy if exists "Operator can delete own conduction document files" on storage.objects;
+create policy "Operator can delete own conduction document files"
 on storage.objects
 for delete
-to anon, authenticated
+to authenticated
 using (
   bucket_id = 'conduction-documents'
-  and (
-    (select auth.role()) = 'authenticated'
-    or created_at >= now() - interval '7 days'
-  )
+  and owner = (select auth.uid())
 );

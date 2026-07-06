@@ -4,7 +4,6 @@ import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
   addQueuedMeasurement,
   dataUrlToBlob,
-  fileToDataUrl,
   getQueuedDocuments,
   getQueuedMeasurements,
   saveQueuedDocuments,
@@ -13,6 +12,10 @@ import {
 } from './lib/offlineStore';
 
 const DOCUMENT_BUCKET = 'conduction-documents';
+const DELETE_FUNCTION = 'delete-local-record';
+const IMAGE_MAX_EDGE = 1600;
+const IMAGE_QUALITY = 0.72;
+const COMPRESSED_IMAGE_TYPE = 'image/jpeg';
 
 const initialMeasurement = {
   pile: '',
@@ -31,7 +34,70 @@ function nowIso() {
 
 function createId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const value = Math.floor(Math.random() * 16);
+    const next = char === 'x' ? value : (value & 0x3) | 0x8;
+    return next.toString(16);
+  });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+function loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('No se pudo procesar la imagen seleccionada.'));
+    };
+    image.src = url;
+  });
+}
+
+async function compressImageFile(file) {
+  const looksLikeImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+  if (!looksLikeImage) {
+    throw new Error(`El archivo ${file.name || 'seleccionado'} no es una imagen válida.`);
+  }
+
+  const image = await loadImageFile(file);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(width, height));
+  const nextWidth = Math.max(1, Math.round(width * scale));
+  const nextHeight = Math.max(1, Math.round(height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = nextWidth;
+  canvas.height = nextHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('No se pudo preparar la compresión de imagen.');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, nextWidth, nextHeight);
+  context.drawImage(image, 0, 0, nextWidth, nextHeight);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, COMPRESSED_IMAGE_TYPE, IMAGE_QUALITY));
+  if (!blob) throw new Error(`No se pudo comprimir ${file.name || 'la imagen'}.`);
+
+  const cleanName = (file.name || 'documento').replace(/\.[^.]+$/, '');
+  return {
+    dataUrl: await blobToDataUrl(blob),
+    fileName: `${cleanName}.jpg`,
+    mimeType: COMPRESSED_IMAGE_TYPE,
+    compressedSize: blob.size,
+    originalSize: file.size,
+  };
 }
 
 function formatDate(value) {
@@ -40,6 +106,311 @@ function formatDate(value) {
     dateStyle: 'short',
     timeStyle: 'short',
   });
+}
+
+function formatDateForFile(value = new Date()) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function escapeCsv(value) {
+  const text = value === null || value === undefined ? '' : String(value);
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
+function downloadCsv(filename, headers, rows) {
+  const content = [
+    headers.map(escapeCsv).join(','),
+    ...rows.map((row) => row.map(escapeCsv).join(',')),
+  ].join('\n');
+  const blob = new Blob([`\ufeff${content}`], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function getMeasurementReportFilename() {
+  return `tasa_riego_${formatDateForFile()}.xlsx`;
+}
+
+const CRC_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  return value >>> 0;
+});
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function strToUtf8Bytes(value) {
+  return Array.from(new TextEncoder().encode(value));
+}
+
+function u16(value) {
+  return [value & 0xff, (value >> 8) & 0xff];
+}
+
+function u32(value) {
+  return [value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff];
+}
+
+function buildZip(files) {
+  const localParts = [];
+  const centralParts = [];
+  const entries = [];
+  let offset = 0;
+  const dosTime = 0x00;
+  const dosDate = 0x21;
+
+  files.forEach((file) => {
+    const nameBytes = strToUtf8Bytes(file.name);
+    const dataBytes = file.data;
+    const crc = crc32(dataBytes);
+    const size = dataBytes.length;
+    const localHeader = [
+      ...u32(0x04034b50),
+      ...u16(20),
+      ...u16(0x0800),
+      ...u16(0),
+      ...u16(dosTime),
+      ...u16(dosDate),
+      ...u32(crc),
+      ...u32(size),
+      ...u32(size),
+      ...u16(nameBytes.length),
+      ...u16(0),
+      ...nameBytes,
+    ];
+    const localEntry = [...localHeader, ...dataBytes];
+    entries.push({ nameBytes, crc, size, offset });
+    localParts.push(localEntry);
+    offset += localEntry.length;
+  });
+
+  const centralOffsetStart = offset;
+  entries.forEach((entry) => {
+    centralParts.push([
+      ...u32(0x02014b50),
+      ...u16(20),
+      ...u16(20),
+      ...u16(0x0800),
+      ...u16(0),
+      ...u16(dosTime),
+      ...u16(dosDate),
+      ...u32(entry.crc),
+      ...u32(entry.size),
+      ...u32(entry.size),
+      ...u16(entry.nameBytes.length),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u16(0),
+      ...u32(0),
+      ...u32(entry.offset),
+      ...entry.nameBytes,
+    ]);
+  });
+
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const eocd = [
+    ...u32(0x06054b50),
+    ...u16(0),
+    ...u16(0),
+    ...u16(entries.length),
+    ...u16(entries.length),
+    ...u32(centralSize),
+    ...u32(centralOffsetStart),
+    ...u16(0),
+  ];
+  return [...localParts.flat(), ...centralParts.flat(), ...eocd];
+}
+
+function xmlEscape(value) {
+  return String(value === null || value === undefined ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function colLetter(index) {
+  let label = '';
+  let value = index + 1;
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    label = String.fromCharCode(65 + remainder) + label;
+    value = Math.floor((value - 1) / 26);
+  }
+  return label;
+}
+
+function buildXlsxBytes(rows, numCols, sheetName, colWidth, freezeRows) {
+  const sharedStrings = [];
+  const sharedIndex = {};
+  const mergeCells = [];
+
+  function sstIndex(text) {
+    if (Object.prototype.hasOwnProperty.call(sharedIndex, text)) return sharedIndex[text];
+    const index = sharedStrings.length;
+    sharedStrings.push(text);
+    sharedIndex[text] = index;
+    return index;
+  }
+
+  const rowsXml = rows.map((row, rowIndex) => {
+    const rowNum = rowIndex + 1;
+    const cellsXml = row.map((cell, colIndex) => {
+      const ref = `${colLetter(colIndex)}${rowNum}`;
+      if (cell.merge && cell.merge > 1) mergeCells.push(`${ref}:${colLetter(colIndex + cell.merge - 1)}${rowNum}`);
+      const text = cell.v === null || cell.v === undefined ? '' : String(cell.v);
+      const styleAttr = cell.style !== undefined ? ` s="${cell.style}"` : '';
+      return `<c r="${ref}" t="s"${styleAttr}><v>${sstIndex(text)}</v></c>`;
+    }).join('');
+    return `<row r="${rowNum}">${cellsXml}</row>`;
+  }).join('');
+
+  const dimensionRef = `A1:${colLetter(numCols - 1)}${rows.length}`;
+  const pane = freezeRows > 0 ? `<pane ySplit="${freezeRows}" topLeftCell="A${freezeRows + 1}" activePane="bottomLeft" state="frozen"/>` : '';
+  const cols = Array.from({ length: numCols }, (_, col) => `<col min="${col + 1}" max="${col + 1}" width="${colWidth}" customWidth="1"/>`).join('');
+  const merges = mergeCells.length
+    ? `<mergeCells count="${mergeCells.length}">${mergeCells.map((merge) => `<mergeCell ref="${merge}"/>`).join('')}</mergeCells>`
+    : '';
+  const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="${dimensionRef}"/><sheetViews><sheetView workbookViewId="0">${pane}</sheetView></sheetViews><cols>${cols}</cols><sheetData>${rowsXml}</sheetData>${merges}</worksheet>`;
+  const sstXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="${sharedStrings.length}" uniqueCount="${sharedStrings.length}">${sharedStrings.map((item) => `<si><t xml:space="preserve">${xmlEscape(item)}</t></si>`).join('')}</sst>`;
+  const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><name val="Calibri"/></font><font><sz val="14"/><b/><name val="Calibri"/></font><font><sz val="10"/><b/><name val="Calibri"/></font><font><sz val="11"/><b/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1E3A5F"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="1" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf><xf numFmtId="0" fontId="3" fillId="2" borderId="0" applyAlignment="1" applyFill="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+  const workbookXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${xmlEscape(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const workbookRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>';
+  const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/></Types>';
+
+  return buildZip([
+    { name: '[Content_Types].xml', data: strToUtf8Bytes(contentTypes) },
+    { name: '_rels/.rels', data: strToUtf8Bytes(rootRels) },
+    { name: 'xl/workbook.xml', data: strToUtf8Bytes(workbookXml) },
+    { name: 'xl/_rels/workbook.xml.rels', data: strToUtf8Bytes(workbookRels) },
+    { name: 'xl/styles.xml', data: strToUtf8Bytes(stylesXml) },
+    { name: 'xl/sharedStrings.xml', data: strToUtf8Bytes(sstXml) },
+    { name: 'xl/worksheets/sheet1.xml', data: strToUtf8Bytes(sheetXml) },
+  ]);
+}
+
+function buildMeasurementXlsx(records) {
+  const headers = ['Fecha', 'Operador', 'Pila', 'Fase', 'Módulo', 'Paño', 'Punto 1', 'Punto 2', 'Punto 3', 'Vol. Total', 'Promedio', 'Tasa (L/h)', 'Observación', 'Estado'];
+  const rows = [
+    [{ v: 'Mantos Group', style: 1, merge: headers.length }],
+    [{ v: `Fecha: ${new Date().toLocaleDateString('es-CL')}   |   Total registros: ${records.length}`, style: 2, merge: headers.length }],
+    headers.map(() => ({ v: '', style: 0 })),
+    headers.map((header) => ({ v: header, style: 3 })),
+  ];
+
+  records.forEach((record) => {
+    rows.push([
+      formatDate(record.createdAt),
+      record.operatorName || '-',
+      record.pile || '-',
+      record.phase || '-',
+      record.module || '-',
+      record.panel || '-',
+      `${record.sample1 ?? 0} mL`,
+      `${record.sample2 ?? 0} mL`,
+      `${record.sample3 ?? 0} mL`,
+      `${record.totalVolume ?? 0} mL`,
+      `${record.averageVolume ?? 0} mL`,
+      `${record.irrigationRate ?? 0} L/h`,
+      record.observation || '-',
+      record.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente',
+    ].map((value) => ({ v: value, style: 0 })));
+  });
+
+  return buildXlsxBytes(rows, headers.length, 'Tasa Riego', 14, 4);
+}
+
+function normalizeAdminMeasurements(rows) {
+  return rows.map((row) => ({
+    id: row.id,
+    createdAt: row.measured_at,
+    operatorName: row.operator_name,
+    pile: row.pile,
+    phase: row.phase,
+    module: row.module,
+    panel: row.panel,
+    sample1: row.sample_1_ml,
+    sample2: row.sample_2_ml,
+    sample3: row.sample_3_ml,
+    totalVolume: row.total_volume_ml,
+    averageVolume: row.average_volume_ml,
+    irrigationRate: row.irrigation_rate_lh,
+    observation: row.observation,
+    syncStatus: 'synced',
+  }));
+}
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunk) {
+    binary += String.fromCharCode(...bytes.slice(index, index + chunk));
+  }
+  return btoa(binary);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+async function shareMeasurementExcel(records) {
+  const bytes = buildMeasurementXlsx(records);
+  const filename = getMeasurementReportFilename();
+  const mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const capacitorPlugins = window.Capacitor?.Plugins;
+  const blob = new Blob([new Uint8Array(bytes)], { type: mimeType });
+
+  if (capacitorPlugins?.Filesystem && capacitorPlugins?.Share) {
+    try {
+      const written = await capacitorPlugins.Filesystem.writeFile({
+        path: filename,
+        data: bytesToBase64(bytes),
+        directory: 'CACHE',
+      });
+      await capacitorPlugins.Share.share({
+        title: 'Reporte Tasa de Riego',
+        text: `Mantos Group - ${new Date().toLocaleDateString('es-CL')}`,
+        url: written.uri,
+        dialogTitle: 'Compartir',
+      });
+      return 'Reporte compartido.';
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+    }
+  }
+
+  const file = new File([blob], filename, { type: mimeType });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ title: 'Reporte Tasa de Riego', text: 'Mantos Group', files: [file] });
+      return 'Reporte compartido.';
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error;
+    }
+  }
+
+  downloadBlob(blob, filename);
+  return 'Reporte descargado.';
 }
 
 function initials(value) {
@@ -54,6 +425,7 @@ function initials(value) {
 
 function buildMeasurementPayload(record) {
   return {
+    id: record.id,
     operator_name: record.operatorName,
     pile: record.pile,
     phase: record.phase,
@@ -67,12 +439,28 @@ function buildMeasurementPayload(record) {
     irrigation_rate_lh: record.irrigationRate,
     observation: record.observation || null,
     measured_at: record.createdAt,
+    delete_token: record.deleteToken || null,
   };
 }
 
 function getDocumentStoragePath(record) {
   if (record.filePath) return record.filePath;
   return `${record.driverName || 'sin-conductor'}/${record.createdAt.slice(0, 10)}/${record.id}-${record.fileName}`;
+}
+
+async function deleteRemoteRecord(kind, record) {
+  if (!record.deleteToken) {
+    throw new Error('Este registro no tiene identificador de eliminación. Sincronice nuevamente o elimínelo desde el panel administrativo.');
+  }
+  const { data, error } = await supabase.functions.invoke(DELETE_FUNCTION, {
+    body: {
+      kind,
+      id: record.id,
+      deleteToken: record.deleteToken,
+    },
+  });
+  if (error) throw new Error(error.message || 'No se pudo eliminar el registro en Supabase.');
+  if (!data?.ok) throw new Error(data?.error || 'No se pudo eliminar el registro en Supabase.');
 }
 
 function calculateMeasurement(values) {
@@ -142,6 +530,19 @@ function App() {
     if (isOnline && canUseSupabase && pendingCount > 0 && !syncing) syncPending();
   }, [isOnline]);
 
+  async function ensureOperatorAuth() {
+    if (!canUseSupabase || !navigator.onLine) return null;
+    const current = await supabase.auth.getSession();
+    if (current.data.session?.user?.is_anonymous) return current.data.session;
+    if (current.data.session && accessRole !== 'admin') await supabase.auth.signOut();
+
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error) {
+      return null;
+    }
+    return data.session;
+  }
+
   async function syncPending() {
     if (!canUseSupabase) {
       setMessage('Configure Supabase para sincronizar datos.');
@@ -154,6 +555,7 @@ function App() {
 
     setSyncing(true);
     try {
+      if (accessRole !== 'admin') await ensureOperatorAuth();
       const nextMeasurements = [];
       for (const record of measurements) {
         if (record.syncStatus === 'synced') {
@@ -174,7 +576,7 @@ function App() {
         const storagePath = getDocumentStoragePath(record);
         const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
           contentType: record.mimeType,
-          upsert: true,
+          upsert: false,
         });
         if (upload.error) {
           nextDocuments.push({ ...record, syncStatus: 'pending', syncError: upload.error.message });
@@ -187,6 +589,7 @@ function App() {
           file_name: record.fileName,
           file_path: storagePath,
           uploaded_at: record.createdAt,
+          delete_token: record.deleteToken || null,
         });
         nextDocuments.push(insert.error ? { ...record, syncStatus: 'pending', syncError: insert.error.message } : { ...record, filePath: storagePath, syncStatus: 'synced', syncError: '' });
       }
@@ -249,7 +652,7 @@ function App() {
     setMessage('Sesión cerrada.');
   }
 
-  function enterOffline(event) {
+  async function enterOffline(event) {
     event.preventDefault();
     if (!operator.trim()) {
       setMessage('Ingrese el nombre del operador.');
@@ -258,6 +661,7 @@ function App() {
     setOperatorName(operator.trim());
     setAccessRole('user');
     setScreen('menu');
+    if (canUseSupabase && navigator.onLine) await ensureOperatorAuth();
   }
 
   function saveMeasurement(event) {
@@ -286,14 +690,39 @@ function App() {
       irrigationRate: Number(calc.irrigationRate.toFixed(2)),
       observation: measurement.observation,
       createdAt: nowIso(),
+      deleteToken: createId(),
       syncStatus: 'pending',
       syncError: '',
     };
     const next = addQueuedMeasurement(record);
     setMeasurements(next);
-    setMeasurement(initialMeasurement);
+    setMeasurement({
+      ...initialMeasurement,
+      pile: measurement.pile,
+      phase: measurement.phase,
+    });
     setMeasurementTab('records');
     setMessage('Medición guardada en el dispositivo.');
+  }
+
+  function clearMeasurementHistory() {
+    setMeasurements([]);
+    saveQueuedMeasurements([]);
+    setMessage('Historial eliminado por completo.');
+  }
+
+  async function shareMeasurementHistory() {
+    if (!measurements.length) {
+      setMessage('No hay registros para exportar.');
+      return;
+    }
+    try {
+      setMessage('Generando reporte...');
+      const result = await shareMeasurementExcel(measurements);
+      setMessage(result);
+    } catch (error) {
+      if (error?.name !== 'AbortError') setMessage(error?.message || 'No se pudo compartir el reporte.');
+    }
   }
 
   async function saveDocuments(event) {
@@ -304,15 +733,18 @@ function App() {
     }
     const created = [];
     for (const file of documentFiles) {
-      const dataUrl = await fileToDataUrl(file);
+      const compressed = await compressImageFile(file);
       created.push({
         id: createId(),
         driverName: activeOperator,
         operatorName: activeOperator,
-        fileName: file.name || 'documento.jpg',
-        mimeType: file.type || 'image/jpeg',
-        dataUrl,
+        fileName: compressed.fileName,
+        mimeType: compressed.mimeType,
+        dataUrl: compressed.dataUrl,
+        originalSize: compressed.originalSize,
+        compressedSize: compressed.compressedSize,
         createdAt: nowIso(),
+        deleteToken: createId(),
         syncStatus: 'pending',
         syncError: '',
       });
@@ -325,36 +757,50 @@ function App() {
   }
 
   async function deleteDocument(record) {
-    if (!canUseSupabase || record.syncStatus !== 'synced') {
+    if (!canUseSupabase || record.syncStatus !== "synced") {
       const next = documents.filter((doc) => doc.id !== record.id);
       setDocuments(next);
       saveQueuedDocuments(next);
-      setMessage('Documento eliminado del dispositivo.');
+      setMessage("Documento eliminado del dispositivo.");
       return;
     }
     if (!navigator.onLine) {
-      setMessage('Se requiere conexión para eliminar un documento ya sincronizado.');
+      setMessage("Se requiere conexion para eliminar un documento ya sincronizado.");
       return;
     }
 
-    const filePath = getDocumentStoragePath(record);
-    const [deleteById, deleteByPath, storageResult] = await Promise.all([
-      supabase.from('conduction_documents').delete().eq('id', record.id),
-      supabase.from('conduction_documents').delete().eq('file_path', filePath),
-      supabase.storage.from(DOCUMENT_BUCKET).remove([filePath]),
-    ]);
-
-    if (deleteById.error || deleteByPath.error || storageResult.error) {
-      setMessage(deleteById.error?.message || deleteByPath.error?.message || storageResult.error?.message || 'No se pudo eliminar el documento en Supabase.');
+    try {
+      await deleteRemoteRecord("document", record);
+    } catch (error) {
+      setMessage(error?.message || "No se pudo eliminar el documento en Supabase.");
       return;
     }
 
     const next = documents.filter((doc) => doc.id !== record.id);
     setDocuments(next);
     saveQueuedDocuments(next);
-    setMessage('Documento eliminado del dispositivo y de Supabase.');
+    setMessage("Documento eliminado del dispositivo y de Supabase.");
   }
+  async function deleteMeasurement(record) {
+    if (!record) return;
+    if (record.syncStatus === "synced") {
+      if (!canUseSupabase || !navigator.onLine) {
+        setMessage("Se requiere conexion para eliminar una medicion ya sincronizada.");
+        return;
+      }
+      try {
+        await deleteRemoteRecord("measurement", record);
+      } catch (error) {
+        setMessage(error?.message || "No se pudo eliminar la medicion en Supabase.");
+        return;
+      }
+    }
 
+    const next = measurements.filter((item) => item.id !== record.id);
+    setMeasurements(next);
+    saveQueuedMeasurements(next);
+    setMessage(record.syncStatus === "synced" ? "Medicion eliminada del dispositivo y de Supabase." : "Medicion eliminada del dispositivo.");
+  }
   function toggleTheme() {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }
@@ -407,6 +853,9 @@ function App() {
           tab={measurementTab}
           setTab={setMeasurementTab}
           records={measurements}
+          onClearHistory={clearMeasurementHistory}
+          onDeleteRecord={deleteMeasurement}
+          onShareHistory={shareMeasurementHistory}
           onBack={() => setScreen('menu')}
           onSubmit={saveMeasurement}
           onTheme={toggleTheme}
@@ -601,8 +1050,31 @@ function MenuCard({ icon, title, desc, onClick, alt, brown }) {
   );
 }
 
-function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onBack, onSubmit, onTheme, onLogout, theme }) {
+function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onClearHistory, onDeleteRecord, onShareHistory, onBack, onSubmit, onTheme, onLogout, theme }) {
   const preview = calculateMeasurement(measurement);
+  const [timerSeconds, setTimerSeconds] = useState(36);
+  const [timerRunning, setTimerRunning] = useState(false);
+
+  useEffect(() => {
+    if (!timerRunning) return undefined;
+    if (timerSeconds <= 0) {
+      setTimerRunning(false);
+      return undefined;
+    }
+    const timerId = window.setTimeout(() => setTimerSeconds((value) => Math.max(value - 1, 0)), 1000);
+    return () => window.clearTimeout(timerId);
+  }, [timerRunning, timerSeconds]);
+
+  function startTimer() {
+    if (timerSeconds <= 0) setTimerSeconds(36);
+    setTimerRunning(true);
+  }
+
+  function resetTimer() {
+    setTimerRunning(false);
+    setTimerSeconds(36);
+  }
+
   return (
     <section>
       <Header title="Tasa de Riego" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
@@ -622,6 +1094,20 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
               <div className="form-row">
                 <Field label="Módulo" value={measurement.module} onChange={(value) => setMeasurement({ ...measurement, module: value })} />
                 <Field label="Paño" value={measurement.panel} onChange={(value) => setMeasurement({ ...measurement, panel: value })} />
+              </div>
+            </div>
+
+            <div className={`timer-card ${timerSeconds === 0 ? 'complete' : ''}`}>
+              <div>
+                <div className="timer-label">Cronómetro de muestreo</div>
+                <div className="timer-value">00:{String(timerSeconds).padStart(2, '0')}</div>
+                <div className="timer-desc">{timerSeconds === 0 ? 'Tiempo finalizado' : 'Cuenta regresiva de 36 segundos'}</div>
+              </div>
+              <div className="timer-actions">
+                <button className="btn-save compact" type="button" onClick={startTimer} disabled={timerRunning}>
+                  {timerRunning ? 'En curso' : 'Iniciar'}
+                </button>
+                <button className="btn-secondary compact" type="button" onClick={resetTimer}>Reiniciar</button>
               </div>
             </div>
 
@@ -667,7 +1153,7 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
           </form>
         )}
 
-        {tab === 'records' && <LocalMeasurements records={records} />}
+        {tab === 'records' && <LocalMeasurements records={records} onClearHistory={onClearHistory} onDeleteRecord={onDeleteRecord} onShareHistory={onShareHistory} />}
       </div>
     </section>
   );
@@ -682,7 +1168,9 @@ function Field({ label, value, onChange, type = 'text' }) {
   );
 }
 
-function LocalMeasurements({ records }) {
+function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onShareHistory }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   if (!records.length) {
     return <div className="empty"><div className="empty-icon">Sin registros</div><p>No hay registros disponibles.</p></div>;
   }
@@ -695,19 +1183,56 @@ function LocalMeasurements({ records }) {
         <Stat label="Promedio" value={avg.toFixed(1)} />
         <Stat label="Máxima" value={max.toFixed(1)} />
       </div>
+      <div className="history-actions">
+        <button className="btn-share-report" type="button" onClick={onShareHistory}>Compartir reporte Excel</button>
+        <button className="btn-danger-outline" type="button" onClick={() => setConfirmOpen(true)}>Eliminar todo el historial</button>
+      </div>
       {records.map((record) => (
         <article className="record-item" key={record.id}>
           <div className="rec-header">
             <div>
-              <strong>Pila {record.pile} · Fase {record.phase} · Módulo {record.module}</strong>
+              <strong>Pila {record.pile} · Fase {record.phase} · Módulo {record.module} · Paño {record.panel || '-'}</strong>
               <p>{formatDate(record.createdAt)} · {record.operatorName}</p>
             </div>
             <span className={`sync-pill ${record.syncStatus === 'synced' ? 'synced' : ''}`}>{record.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
+            <button
+              className="btn-record-delete"
+              type="button"
+              aria-label="Eliminar medición"
+              onClick={() => {
+                if (window.confirm('¿Confirma que desea eliminar esta medición?')) onDeleteRecord(record);
+              }}
+            >
+              ×
+            </button>
           </div>
           <div className="record-tasa">{record.irrigationRate} L/h</div>
           {record.observation ? <p className="record-note">{record.observation}</p> : null}
         </article>
       ))}
+      {confirmOpen && (
+        <div className="modal-overlay open" role="dialog" aria-modal="true" onClick={() => setConfirmOpen(false)}>
+          <div className="modal-box" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-title">Eliminar todo el historial</div>
+            <p className="modal-text">
+              Esta acción eliminará permanentemente los <strong>{records.length}</strong> registros guardados en este dispositivo.
+            </p>
+            <div className="modal-btns">
+              <button className="btn-modal-cancel" type="button" onClick={() => setConfirmOpen(false)}>Cancelar</button>
+              <button
+                className="btn-danger-fill"
+                type="button"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  onClearHistory();
+                }}
+              >
+                Sí, eliminar historial
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -743,6 +1268,8 @@ function ConductionScreen({ operator, pendingCount, isOnline, documents, files, 
 }
 
 function LocalDocuments({ documents, onDelete }) {
+  const [preview, setPreview] = useState(null);
+
   return (
     <div className="card">
       <div className="cond-section-title">
@@ -753,7 +1280,9 @@ function LocalDocuments({ documents, onDelete }) {
       <div className="cond-gallery">
         {documents.map((doc) => (
           <article className="cond-thumb" key={doc.id}>
-            <img src={doc.dataUrl} alt={doc.fileName} />
+            <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.dataUrl, title: doc.fileName })}>
+              <img src={doc.dataUrl} alt={doc.fileName} />
+            </button>
             <div className="cond-thumb-info">
               <strong>{doc.fileName}</strong>
               <span>{formatDate(doc.createdAt)} · {doc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
@@ -761,6 +1290,46 @@ function LocalDocuments({ documents, onDelete }) {
             </div>
           </article>
         ))}
+      </div>
+      {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
+    </div>
+  );
+}
+
+function ImageZoomModal({ image, onClose }) {
+  const [zoom, setZoom] = useState(1);
+
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="image-modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
+      <div className="image-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="image-modal-header">
+          <strong>{image.title}</strong>
+          <button type="button" onClick={onClose}>Cerrar</button>
+        </div>
+        <div className="image-modal-stage">
+          <img src={image.src} alt={image.title} style={{ transform: `scale(${zoom})` }} />
+        </div>
+        <div className="image-modal-controls">
+          <button type="button" onClick={() => setZoom((value) => Math.max(1, Number((value - 0.25).toFixed(2))))}>-</button>
+          <input
+            type="range"
+            min="1"
+            max="4"
+            step="0.25"
+            value={zoom}
+            onChange={(event) => setZoom(Number(event.target.value))}
+            aria-label="Nivel de zoom"
+          />
+          <button type="button" onClick={() => setZoom((value) => Math.min(4, Number((value + 0.25).toFixed(2))))}>+</button>
+        </div>
       </div>
     </div>
   );
@@ -859,6 +1428,8 @@ function AdminScreen({
   onTheme,
   theme,
 }) {
+  const [activeAdminCategory, setActiveAdminCategory] = useState('measurements');
+
   return (
     <section>
       <Header title="Panel administrador" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
@@ -887,8 +1458,26 @@ function AdminScreen({
                 <button className="btn-secondary compact" type="button" onClick={onLogout}>Salir</button>
               </div>
             </div>
-            <AdminMeasurements rows={measurements} />
-            <AdminDocuments rows={documents} />
+            <div className="admin-category-tabs">
+              <button
+                className={activeAdminCategory === 'measurements' ? 'active' : ''}
+                type="button"
+                onClick={() => setActiveAdminCategory('measurements')}
+              >
+                Medición de tasa de riego
+                <span>{measurements.length} registro(s)</span>
+              </button>
+              <button
+                className={activeAdminCategory === 'documents' ? 'active' : ''}
+                type="button"
+                onClick={() => setActiveAdminCategory('documents')}
+              >
+                Conducción
+                <span>{documents.length} documento(s)</span>
+              </button>
+            </div>
+            {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} />}
+            {activeAdminCategory === 'documents' && <AdminDocuments rows={documents} />}
           </>
         )}
       </div>
@@ -897,9 +1486,30 @@ function AdminScreen({
 }
 
 function AdminMeasurements({ rows }) {
+  const [exportMessage, setExportMessage] = useState('');
+
+  async function exportRows() {
+    if (!rows.length) return;
+    try {
+      setExportMessage('Generando reporte...');
+      const result = await shareMeasurementExcel(normalizeAdminMeasurements(rows));
+      setExportMessage(result);
+    } catch (error) {
+      if (error?.name !== 'AbortError') setExportMessage(error?.message || 'No se pudo compartir el reporte.');
+    }
+  }
+
   return (
     <div className="card">
-      <div className="card-title">Historial de tasas de riego</div>
+      <div className="admin-section-head">
+        <div>
+          <div className="card-title">Historial de tasas de riego</div>
+          <p>Registros sincronizados desde los operadores en terreno.</p>
+        </div>
+        <button className="btn-share-report admin-export-button" type="button" onClick={exportRows} disabled={!rows.length}>Compartir reporte Excel</button>
+      </div>
+      {exportMessage && <p className="admin-export-message">{exportMessage}</p>}
+      {!rows.length && <div className="cond-empty-hint">No hay mediciones sincronizadas.</div>}
       <div className="table-wrap">
         <table>
           <thead>
@@ -915,7 +1525,7 @@ function AdminMeasurements({ rows }) {
               <tr key={row.id}>
                 <td>{formatDate(row.measured_at)}</td>
                 <td>{row.operator_name}</td>
-                <td>Pila {row.pile} · Fase {row.phase} · Módulo {row.module}</td>
+                <td>Pila {row.pile} · Fase {row.phase} · Módulo {row.module} · Paño {row.panel || '-'}</td>
                 <td><strong>{row.irrigation_rate_lh} L/h</strong></td>
               </tr>
             ))}
@@ -927,6 +1537,8 @@ function AdminMeasurements({ rows }) {
 }
 
 function AdminDocuments({ rows }) {
+  const [preview, setPreview] = useState(null);
+
   return (
     <div className="card">
       <div className="card-title">Documentación de conducción</div>
@@ -934,12 +1546,17 @@ function AdminDocuments({ rows }) {
       <div className="admin-doc-grid">
         {rows.map((doc) => (
           <article key={doc.id} className="admin-doc-card">
-            {doc.signedUrl ? <img src={doc.signedUrl} alt={doc.file_name} /> : null}
+            {doc.signedUrl ? (
+              <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.signedUrl, title: doc.file_name })}>
+                <img src={doc.signedUrl} alt={doc.file_name} />
+              </button>
+            ) : null}
             <strong>{doc.driver_name}</strong>
             <span>{formatDate(doc.uploaded_at)} · {doc.file_name}</span>
           </article>
         ))}
       </div>
+      {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }
