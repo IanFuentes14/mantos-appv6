@@ -1,0 +1,1085 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Izajes - Vista previa</title>
+    <style>
+      :root {
+        --blue-dark: #1e3a5f;
+        --blue-mid: #2f5d8c;
+        --bg: #f5f7fb;
+        --card: #ffffff;
+        --border: #dce3ec;
+        --text: #172033;
+        --muted: #697586;
+        --success: #278d5c;
+        --danger: #c0392b;
+        --danger-bg: #fdecea;
+        --shadow: 0 12px 28px rgba(30, 58, 95, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .shell {
+        max-width: 860px;
+        min-height: 100vh;
+        margin: 0 auto;
+        background: var(--bg);
+      }
+
+      header {
+        padding: 20px 16px;
+        background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
+        color: #fff;
+      }
+
+      header span {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      header h1 {
+        margin: 6px 0 0;
+        font-size: 26px;
+      }
+
+      main {
+        padding: 16px;
+      }
+
+      .lifting-menu {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+
+      .lifting-menu button {
+        min-height: 52px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: var(--shadow);
+      }
+
+      .lifting-menu button.active {
+        border-color: var(--blue-mid);
+        background: var(--blue-dark);
+        color: #fff;
+      }
+
+      .section-heading {
+        margin-bottom: 14px;
+      }
+
+      .section-heading span {
+        color: var(--blue-mid);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .section-heading h2 {
+        margin: 4px 0;
+        font-size: 22px;
+      }
+
+      .section-heading p,
+      .formula-description,
+      .formula-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .card {
+        padding: 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .formula-card + .formula-card {
+        margin-top: 14px;
+      }
+
+      .card-title {
+        margin-bottom: 8px;
+        color: var(--text);
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        font-size: 16px;
+      }
+
+      .work-capacity-result {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 8px;
+        margin-top: 14px;
+      }
+
+      .work-capacity-result span {
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .work-capacity-result strong {
+        font-size: 24px;
+        font-weight: 900;
+      }
+
+      .work-capacity-result.safe {
+        border: 1px solid rgba(39, 141, 92, 0.32);
+        background: rgba(39, 141, 92, 0.1);
+        color: var(--success);
+      }
+
+      .work-capacity-result.danger {
+        border: 1px solid rgba(192, 57, 43, 0.36);
+        background: var(--danger-bg);
+        color: var(--danger);
+      }
+
+      .sling-results {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .sling-results .work-capacity-result {
+        margin-top: 0;
+      }
+
+      .pieces-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .piece-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        align-items: end;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .piece-remove {
+        width: 40px;
+        height: 42px;
+        border: 1px solid rgba(192, 57, 43, 0.26);
+        border-radius: 8px;
+        background: var(--danger-bg);
+        color: var(--danger);
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .lifting-controls-card {
+        display: grid;
+        grid-template-columns: 1fr;
+        align-items: end;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .unit-toggle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-width: 132px;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .unit-toggle button {
+        padding: 10px 12px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .unit-toggle button.active {
+        background: var(--blue-dark);
+        color: #fff;
+      }
+
+      select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        color: var(--text);
+        font-size: 15px;
+      }
+
+      .weight-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .measure-field {
+        min-width: 0;
+      }
+
+      .field-unit-toggle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 8px;
+        background: #f8fafc;
+      }
+
+      .field-unit-toggle button {
+        padding: 9px 10px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .field-unit-toggle button.active {
+        background: var(--blue-dark);
+        color: #fff;
+      }
+
+      .weight-calculator-card {
+        margin-bottom: 14px;
+      }
+
+      .weight-result-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .weight-result-grid div {
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .weight-result-grid span,
+      .weight-result-grid strong {
+        display: block;
+      }
+
+      .weight-result-grid span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .weight-result-grid strong {
+        margin-top: 4px;
+        color: var(--blue-mid);
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .weight-result {
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .weight-result span,
+      .weight-result strong {
+        display: block;
+      }
+
+      .weight-result span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .weight-result strong {
+        margin-top: 4px;
+        color: var(--blue-mid);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .weight-warning {
+        display: none;
+        padding: 10px 12px;
+        border: 1px solid rgba(192, 57, 43, 0.28);
+        border-radius: 8px;
+        margin-top: 10px;
+        background: var(--danger-bg);
+        color: var(--danger);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .formula-note {
+        margin-top: 10px;
+        font-weight: 700;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .checklist-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .checklist-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .checklist-progress {
+        min-width: 74px;
+        padding: 10px;
+        border: 1px solid rgba(39, 141, 92, 0.24);
+        border-radius: 8px;
+        background: rgba(39, 141, 92, 0.08);
+        color: var(--success);
+        text-align: center;
+      }
+
+      .checklist-progress strong,
+      .checklist-progress span {
+        display: block;
+      }
+
+      .checklist-progress strong {
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .checklist-progress span {
+        margin-top: 2px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .checklist-items {
+        display: grid;
+        gap: 8px;
+      }
+
+      .checklist-item {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+
+      .checklist-item input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--success);
+      }
+
+      .checklist-index {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .checklist-label {
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .checklist-item.checked {
+        border-color: rgba(39, 141, 92, 0.3);
+        background: rgba(39, 141, 92, 0.08);
+      }
+
+      .btn-secondary {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 12px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      @media (max-width: 520px) {
+        .form-row,
+        .lifting-controls-card,
+        .weight-fields,
+        .sling-results,
+        .piece-row {
+          grid-template-columns: 1fr;
+        }
+
+        .unit-toggle,
+        .field-unit-toggle {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <span>Mantos Group</span>
+        <h1>Izajes</h1>
+      </header>
+      <main>
+        <nav class="lifting-menu" aria-label="Menu Izajes">
+          <button class="active" type="button" data-section-button="formulas">Formulas</button>
+          <button type="button" data-section-button="weight">Calculo de peso</button>
+          <button type="button">Tablas de carga</button>
+          <button type="button" data-section-button="documentation">Documentacion</button>
+        </nav>
+
+        <div data-section="formulas">
+          <section class="section-heading">
+            <span>Modulo de formulas</span>
+            <h2>Izajes</h2>
+            <p>Herramientas de apoyo para evaluacion operacional de maniobras de izaje.</p>
+          </section>
+
+          <section class="card formula-card">
+            <div class="card-title">Capacidad de trabajo</div>
+            <p class="formula-description">Calcula el porcentaje de utilizacion de la grua respecto del peso de la carga.</p>
+
+            <div class="form-row">
+              <div>
+                <label for="peso_carga">Peso carga</label>
+                <input id="peso_carga" type="number" inputmode="decimal" min="0" placeholder="Ej: 12" />
+              </div>
+              <div>
+                <label for="cap_grua">Capacidad grua</label>
+                <input id="cap_grua" type="number" inputmode="decimal" min="0" placeholder="Ej: 20" />
+              </div>
+            </div>
+
+            <div id="resultado" class="work-capacity-result safe">
+              <span>Resultado</span>
+              <strong>Ingrese valores</strong>
+            </div>
+          </section>
+
+          <section class="card formula-card">
+            <div class="card-title">Angulo de trabajo y tension de eslingas</div>
+            <p class="formula-description">Calcula el angulo de trabajo y la tension por eslinga segun la configuracion de izaje.</p>
+
+            <div class="form-row">
+              <div>
+                <label for="sling_peso">Peso total</label>
+                <input id="sling_peso" type="number" inputmode="decimal" min="0" placeholder="Ej: 1200" />
+              </div>
+              <div>
+                <label for="sling_n">Numero de eslingas</label>
+                <input id="sling_n" type="number" inputmode="numeric" min="1" step="1" placeholder="Ej: 4" />
+              </div>
+              <div>
+                <label for="sling_l">Longitud eslinga (L)</label>
+                <input id="sling_l" type="number" inputmode="decimal" min="0" placeholder="Ej: 3" />
+              </div>
+              <div>
+                <label for="sling_h">Altura gancho a carga (H)</label>
+                <input id="sling_h" type="number" inputmode="decimal" min="0" placeholder="Ej: 2.4" />
+              </div>
+            </div>
+
+            <div id="sling_error" class="weight-warning">La longitud de la eslinga debe ser mayor o igual a la altura.</div>
+            <div class="sling-results">
+              <div id="sling_angle_result" class="work-capacity-result safe">
+                <span>Angulo</span>
+                <strong>Ingrese valores</strong>
+              </div>
+              <div id="sling_tension_result" class="work-capacity-result safe">
+                <span>Tension por eslinga</span>
+                <strong>Ingrese valores</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="card formula-card">
+            <div class="card-title">Centro de gravedad</div>
+            <p class="formula-description">Calcula el centro de gravedad de una carga asimetrica compuesta desde un punto cero definido.</p>
+
+            <div id="cg_pieces" class="pieces-list"></div>
+            <button id="cg_add_piece" class="btn-secondary" type="button">Agregar pieza</button>
+
+            <div class="sling-results">
+              <div id="cg_weight_result" class="work-capacity-result safe">
+                <span>Peso total</span>
+                <strong>Ingrese valores</strong>
+              </div>
+              <div id="cg_result" class="work-capacity-result safe">
+                <span>CG final</span>
+                <strong>Ingrese valores</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="card formula-card">
+            <div class="card-title">Angulo y altura de pluma</div>
+            <p class="formula-description">Calcula el angulo de trabajo de la pluma y la altura de la punta segun longitud y radio de operacion.</p>
+
+            <div class="form-row">
+              <div>
+                <label for="boom_l">Longitud pluma (L)</label>
+                <input id="boom_l" type="number" inputmode="decimal" min="0" placeholder="Ej: 30" />
+              </div>
+              <div>
+                <label for="boom_r">Radio operacion (R)</label>
+                <input id="boom_r" type="number" inputmode="decimal" min="0" placeholder="Ej: 18" />
+              </div>
+            </div>
+
+            <div id="boom_error" class="weight-warning">El radio de operacion debe ser menor que la longitud de pluma.</div>
+            <div class="sling-results">
+              <div id="boom_angle_result" class="work-capacity-result safe">
+                <span>Angulo pluma</span>
+                <strong>Ingrese valores</strong>
+              </div>
+              <div id="boom_height_result" class="work-capacity-result safe">
+                <span>Altura punta pluma</span>
+                <strong>Ingrese valores</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="hidden" data-section="weight">
+          <section class="section-heading">
+            <span>Calculo de peso</span>
+            <h2>Material y geometria</h2>
+            <p>Seleccione material e ingrese cada dimension con su unidad correspondiente.</p>
+          </section>
+
+          <section class="card lifting-controls-card">
+            <div>
+              <label for="material">Material</label>
+              <select id="material"></select>
+            </div>
+          </section>
+
+          <section class="card weight-calculator-card" data-calculator="solidTube">
+            <div class="card-title">Tubo</div>
+            <div class="weight-fields">
+              <div class="measure-field">
+                <label>Diametro</label>
+                <input data-field="diameter" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Diametro">
+                  <button class="active" type="button" data-unit-value="cm">cm</button>
+                  <button type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+              <div class="measure-field">
+                <label>Longitud</label>
+                <input data-field="length" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Longitud">
+                  <button type="button" data-unit-value="cm">cm</button>
+                  <button class="active" type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+            </div>
+            <div class="weight-result">
+              <span>Peso</span>
+              <strong data-weight>Ingrese valores</strong>
+            </div>
+          </section>
+
+          <section class="card weight-calculator-card" data-calculator="emptyTube">
+            <div class="card-title">Tubo vacio</div>
+            <div class="weight-fields">
+              <div class="measure-field">
+                <label>Diametro</label>
+                <input data-field="diameter" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Diametro">
+                  <button class="active" type="button" data-unit-value="cm">cm</button>
+                  <button type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+              <div class="measure-field">
+                <label>Espesor</label>
+                <input data-field="thickness" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Espesor">
+                  <button class="active" type="button" data-unit-value="cm">cm</button>
+                  <button type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+              <div class="measure-field">
+                <label>Longitud</label>
+                <input data-field="length" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Longitud">
+                  <button type="button" data-unit-value="cm">cm</button>
+                  <button class="active" type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+            </div>
+            <div class="weight-warning" data-warning>El diametro debe ser mayor que el doble del espesor.</div>
+            <div class="weight-result">
+              <span>Peso</span>
+              <strong data-weight>Ingrese valores</strong>
+            </div>
+          </section>
+
+          <section class="card weight-calculator-card" data-calculator="square">
+            <div class="card-title">Cuadrado</div>
+            <div class="weight-fields">
+              <div class="measure-field">
+                <label>Base</label>
+                <input data-field="base" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Base">
+                  <button class="active" type="button" data-unit-value="cm">cm</button>
+                  <button type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+              <div class="measure-field">
+                <label>Altura</label>
+                <input data-field="height" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Altura">
+                  <button class="active" type="button" data-unit-value="cm">cm</button>
+                  <button type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+              <div class="measure-field">
+                <label>Longitud</label>
+                <input data-field="length" type="number" inputmode="decimal" min="0" />
+                <div class="field-unit-toggle" role="group" aria-label="Unidad Longitud">
+                  <button type="button" data-unit-value="cm">cm</button>
+                  <button class="active" type="button" data-unit-value="m">m</button>
+                </div>
+              </div>
+            </div>
+            <div class="weight-result">
+              <span>Peso</span>
+              <strong data-weight>Ingrese valores</strong>
+            </div>
+          </section>
+        </div>
+
+        <section class="card hidden" data-section="documentation">
+          <div class="checklist-head">
+            <div>
+              <div class="card-title">Documentacion previa a maniobra</div>
+              <p>Verifique los antecedentes obligatorios antes de iniciar la maniobra de izaje.</p>
+            </div>
+            <div class="checklist-progress">
+              <strong id="checklist-count">0/14</strong>
+              <span id="checklist-percent">0%</span>
+            </div>
+          </div>
+          <div id="checklist-items" class="checklist-items"></div>
+          <button id="clear-checklist" class="btn-secondary" type="button">Limpiar checklist</button>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const pesoCarga = document.getElementById('peso_carga');
+      const capGrua = document.getElementById('cap_grua');
+      const resultado = document.getElementById('resultado');
+      const resultadoValor = resultado.querySelector('strong');
+      const slingPeso = document.getElementById('sling_peso');
+      const slingN = document.getElementById('sling_n');
+      const slingL = document.getElementById('sling_l');
+      const slingH = document.getElementById('sling_h');
+      const slingError = document.getElementById('sling_error');
+      const slingAngleResult = document.getElementById('sling_angle_result');
+      const slingTensionResult = document.getElementById('sling_tension_result');
+      const slingAngleValue = slingAngleResult.querySelector('strong');
+      const slingTensionValue = slingTensionResult.querySelector('strong');
+      const cgPieces = document.getElementById('cg_pieces');
+      const cgAddPiece = document.getElementById('cg_add_piece');
+      const cgWeightValue = document.querySelector('#cg_weight_result strong');
+      const cgValue = document.querySelector('#cg_result strong');
+      const boomL = document.getElementById('boom_l');
+      const boomR = document.getElementById('boom_r');
+      const boomError = document.getElementById('boom_error');
+      const boomAngleResult = document.getElementById('boom_angle_result');
+      const boomHeightResult = document.getElementById('boom_height_result');
+      const boomAngleValue = boomAngleResult.querySelector('strong');
+      const boomHeightValue = boomHeightResult.querySelector('strong');
+      const checklistItems = [
+        'Procedimiento de trabajo',
+        'Difusion de procedimiento',
+        'Evaluacion de procedimiento',
+        'QRA (Matriz de riesgos)',
+        'Difusion de QRA',
+        'Respaldo de GCOM',
+        'Permisos aplicables',
+        'ART',
+        'Cartillas controles criticos',
+        'Checklists aplicables',
+        'Plan de emergencia',
+        'Plan transito del area',
+        'Certificaciones',
+        'Documentos del camion'
+      ];
+      const materials = [
+        { name: 'PVC', density: 1400 },
+        { name: 'HDPE', density: 950 },
+        { name: 'Hormigon', density: 2400 },
+        { name: 'Cobre', density: 8960 },
+        { name: 'Acero carbono', density: 7850 },
+        { name: 'Acero inox', density: 8000 },
+        { name: 'Hierro', density: 7860 },
+        { name: 'Plomo', density: 11340 }
+      ];
+      function calcular() {
+        const peso = Number(pesoCarga.value);
+        const capacidad = Number(capGrua.value);
+        const valido = peso > 0 && capacidad > 0;
+        const porcentaje = valido ? (peso / capacidad) * 100 : 0;
+
+        resultado.classList.toggle('danger', valido && porcentaje >= 75);
+        resultado.classList.toggle('safe', !valido || porcentaje < 75);
+        resultadoValor.textContent = valido ? `${porcentaje.toFixed(2)}%` : 'Ingrese valores';
+      }
+
+      function calcularEslingas() {
+        const peso = Number(slingPeso.value);
+        const n = Number(slingN.value);
+        const l = Number(slingL.value);
+        const h = Number(slingH.value);
+        const valido = peso > 0 && n > 0 && l > 0 && h > 0;
+        const error = valido && l < h;
+
+        slingError.style.display = error ? 'block' : 'none';
+        slingAngleResult.classList.toggle('danger', error);
+        slingAngleResult.classList.toggle('safe', !error);
+        slingTensionResult.classList.toggle('danger', error);
+        slingTensionResult.classList.toggle('safe', !error);
+
+        if (!valido) {
+          slingAngleValue.textContent = 'Ingrese valores';
+          slingTensionValue.textContent = 'Ingrese valores';
+          return;
+        }
+
+        if (error) {
+          slingAngleValue.textContent = 'Error';
+          slingTensionValue.textContent = 'Error';
+          return;
+        }
+
+        const anguloGrados = Math.asin(h / l) * (180 / Math.PI);
+        const tensionEslinga = (peso / n) * (l / h);
+
+        slingAngleValue.textContent = `${anguloGrados.toFixed(2)}°`;
+        slingTensionValue.textContent = tensionEslinga.toFixed(2);
+      }
+
+      function calcularCentroGravedad(piezas) {
+        let peso_total = 0;
+        let suma_momentos = 0;
+
+        for (const pieza of piezas) {
+          peso_total += pieza.peso;
+          suma_momentos += pieza.peso * pieza.distancia_al_punto_cero;
+        }
+
+        if (peso_total === 0) return { peso_total: 0, CG_final: 0 };
+
+        return {
+          peso_total,
+          CG_final: suma_momentos / peso_total
+        };
+      }
+
+      function addCgPiece(peso = '', distancia = '') {
+        const row = document.createElement('div');
+        row.className = 'piece-row';
+        row.innerHTML = `
+          <div>
+            <label>Peso</label>
+            <input data-cg-field="peso" type="number" inputmode="decimal" min="0" value="${peso}" placeholder="Ej: 500" />
+          </div>
+          <div>
+            <label>Distancia al punto cero</label>
+            <input data-cg-field="distancia" type="number" inputmode="decimal" value="${distancia}" placeholder="Ej: 1.2" />
+          </div>
+          <button class="piece-remove" type="button" aria-label="Eliminar pieza">×</button>
+        `;
+        cgPieces.appendChild(row);
+        row.querySelectorAll('input').forEach((input) => input.addEventListener('input', updateCg));
+        row.querySelector('.piece-remove').addEventListener('click', () => {
+          row.remove();
+          if (!cgPieces.children.length) addCgPiece();
+          updateCg();
+        });
+      }
+
+      function getCgPiezas() {
+        return Array.from(cgPieces.querySelectorAll('.piece-row'))
+          .map((row) => ({
+            peso: Number(row.querySelector('[data-cg-field="peso"]').value),
+            distancia_al_punto_cero: Number(row.querySelector('[data-cg-field="distancia"]').value)
+          }))
+          .filter((pieza) => pieza.peso > 0 && Number.isFinite(pieza.distancia_al_punto_cero));
+      }
+
+      function updateCg() {
+        const piezas = getCgPiezas();
+        const resultadoCg = calcularCentroGravedad(piezas);
+        const valido = resultadoCg.peso_total > 0;
+
+        cgWeightValue.textContent = valido ? resultadoCg.peso_total.toFixed(2) : 'Ingrese valores';
+        cgValue.textContent = valido ? resultadoCg.CG_final.toFixed(2) : 'Ingrese valores';
+      }
+
+      function calcularPluma(longitud_pluma, radio_operacion) {
+        if (longitud_pluma <= radio_operacion) {
+          throw new Error('Radio operacional invalido');
+        }
+
+        return {
+          angulo_pluma_grados: Math.acos(radio_operacion / longitud_pluma) * (180 / Math.PI),
+          altura_punta_pluma: Math.sqrt((longitud_pluma * longitud_pluma) - (radio_operacion * radio_operacion))
+        };
+      }
+
+      function updateBoom() {
+        const longitudPluma = Number(boomL.value);
+        const radioOperacion = Number(boomR.value);
+        const valido = longitudPluma > 0 && radioOperacion > 0;
+        const error = valido && radioOperacion >= longitudPluma;
+
+        boomError.style.display = error ? 'block' : 'none';
+        boomAngleResult.classList.toggle('danger', error);
+        boomAngleResult.classList.toggle('safe', !error);
+        boomHeightResult.classList.toggle('danger', error);
+        boomHeightResult.classList.toggle('safe', !error);
+
+        if (!valido) {
+          boomAngleValue.textContent = 'Ingrese valores';
+          boomHeightValue.textContent = 'Ingrese valores';
+          return;
+        }
+
+        if (error) {
+          boomAngleValue.textContent = 'Error';
+          boomHeightValue.textContent = 'Error';
+          return;
+        }
+
+        const resultadoPluma = calcularPluma(longitudPluma, radioOperacion);
+        boomAngleValue.textContent = `${resultadoPluma.angulo_pluma_grados.toFixed(2)}°`;
+        boomHeightValue.textContent = resultadoPluma.altura_punta_pluma.toFixed(2);
+      }
+
+      function showSection(section) {
+        document.querySelectorAll('[data-section]').forEach((element) => {
+          element.classList.toggle('hidden', element.dataset.section !== section);
+        });
+        document.querySelectorAll('[data-section-button]').forEach((button) => {
+          button.classList.toggle('active', button.dataset.sectionButton === section);
+        });
+      }
+
+      function toMeters(value, unit = 'm') {
+        const number = Number(value);
+        if (!Number.isFinite(number) || number <= 0) return 0;
+        return unit === 'cm' ? number / 100 : number;
+      }
+
+      function formatWeight(value) {
+        if (!Number.isFinite(value) || value <= 0) return 'Ingrese valores';
+        if (value >= 1000) return `${(value / 1000).toFixed(2)} t`;
+        return `${value.toFixed(2)} kg`;
+      }
+
+      function getDensity() {
+        return Number(document.getElementById('material').value || materials[0].density);
+      }
+
+      function valueFrom(card, field) {
+        return card.querySelector(`[data-field="${field}"]`)?.value || '';
+      }
+
+      function unitFrom(card, field) {
+        const input = card.querySelector(`[data-field="${field}"]`);
+        const activeButton = input?.closest('.measure-field')?.querySelector('.field-unit-toggle button.active');
+        return activeButton?.dataset.unitValue || 'm';
+      }
+
+      function setResult(card, volume) {
+        const weight = volume * getDensity();
+        card.querySelector('[data-weight]').textContent = formatWeight(weight);
+      }
+
+      function calculateWeights() {
+        const solidTube = document.querySelector('[data-calculator="solidTube"]');
+        const solidDiameter = toMeters(valueFrom(solidTube, 'diameter'), unitFrom(solidTube, 'diameter'));
+        const solidLength = toMeters(valueFrom(solidTube, 'length'), unitFrom(solidTube, 'length'));
+        setResult(solidTube, Math.PI * (solidDiameter / 2) ** 2 * solidLength);
+
+        const emptyTube = document.querySelector('[data-calculator="emptyTube"]');
+        const outerRadius = toMeters(valueFrom(emptyTube, 'diameter'), unitFrom(emptyTube, 'diameter')) / 2;
+        const thickness = toMeters(valueFrom(emptyTube, 'thickness'), unitFrom(emptyTube, 'thickness'));
+        const innerRadius = outerRadius - thickness;
+        const emptyLength = toMeters(valueFrom(emptyTube, 'length'), unitFrom(emptyTube, 'length'));
+        const warning = emptyTube.querySelector('[data-warning]');
+        const invalidThickness = outerRadius > 0 && thickness > 0 && innerRadius <= 0;
+        warning.style.display = invalidThickness ? 'block' : 'none';
+        setResult(emptyTube, innerRadius > 0 ? Math.PI * emptyLength * (outerRadius ** 2 - innerRadius ** 2) : 0);
+
+        const square = document.querySelector('[data-calculator="square"]');
+        const base = toMeters(valueFrom(square, 'base'), unitFrom(square, 'base'));
+        const height = toMeters(valueFrom(square, 'height'), unitFrom(square, 'height'));
+        const length = toMeters(valueFrom(square, 'length'), unitFrom(square, 'length'));
+        setResult(square, base * height * length);
+      }
+
+      function renderMaterials() {
+        const select = document.getElementById('material');
+        select.innerHTML = materials.map((item) => `<option value="${item.density}">${item.name} - ${item.density} kg/m3</option>`).join('');
+      }
+
+      function updateChecklistProgress() {
+        const checked = document.querySelectorAll('#checklist-items input:checked').length;
+        const total = checklistItems.length;
+        document.getElementById('checklist-count').textContent = `${checked}/${total}`;
+        document.getElementById('checklist-percent').textContent = `${Math.round((checked / total) * 100)}%`;
+      }
+
+      function renderChecklist() {
+        const container = document.getElementById('checklist-items');
+        container.innerHTML = checklistItems.map((item, index) => `
+          <label class="checklist-item">
+            <input type="checkbox" />
+            <span class="checklist-index">${String(index + 1).padStart(2, '0')}</span>
+            <span class="checklist-label">${item}</span>
+          </label>
+        `).join('');
+
+        container.querySelectorAll('input').forEach((input) => {
+          input.addEventListener('change', () => {
+            input.closest('.checklist-item').classList.toggle('checked', input.checked);
+            updateChecklistProgress();
+          });
+        });
+      }
+
+      pesoCarga.addEventListener('input', calcular);
+      capGrua.addEventListener('input', calcular);
+      [slingPeso, slingN, slingL, slingH].forEach((input) => {
+        input.addEventListener('input', calcularEslingas);
+      });
+      cgAddPiece.addEventListener('click', () => {
+        addCgPiece();
+        updateCg();
+      });
+      [boomL, boomR].forEach((input) => {
+        input.addEventListener('input', updateBoom);
+      });
+      addCgPiece();
+      addCgPiece();
+      renderMaterials();
+      document.getElementById('material').addEventListener('change', calculateWeights);
+      document.querySelectorAll('[data-unit-value]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const group = button.closest('.field-unit-toggle');
+          group.querySelectorAll('button').forEach((unitButton) => {
+            unitButton.classList.toggle('active', unitButton === button);
+          });
+          calculateWeights();
+        });
+      });
+      document.querySelectorAll('[data-calculator] input').forEach((input) => {
+        input.addEventListener('input', calculateWeights);
+      });
+      document.querySelectorAll('[data-section-button]').forEach((button) => {
+        button.addEventListener('click', () => showSection(button.dataset.sectionButton));
+      });
+      document.getElementById('clear-checklist').addEventListener('click', () => {
+        document.querySelectorAll('#checklist-items input').forEach((input) => {
+          input.checked = false;
+          input.closest('.checklist-item').classList.remove('checked');
+        });
+        updateChecklistProgress();
+      });
+      renderChecklist();
+      calculateWeights();
+      calcularEslingas();
+      updateCg();
+      updateBoom();
+    </script>
+  </body>
+</html>

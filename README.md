@@ -20,6 +20,7 @@ Aplicacion operacional para registrar tasas de riego, gestionar documentacion de
 - Historial administrativo de tasas de riego.
 - Revision de conductores que subieron documentacion cada dia.
 - Glosario tecnico con modo de prueba.
+- Modulo Izajes con formulas, calculo de peso y checklist documental.
 
 ## Configuracion local
 

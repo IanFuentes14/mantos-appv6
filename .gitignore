@@ -3,6 +3,8 @@ build-apk-nuevo-*/
 node_modules/
 .npm-cache/
 dist/
+output/
+tmp/
 
 .env
 .env.local
@@ -13,3 +15,11 @@ dist/
 
 .DS_Store
 Thumbs.db
+
+# Local Netlify folder
+.netlify
+
+# PWA artifacts not used in this version
+public/icons/
+public/manifest.webmanifest
+public/sw.js

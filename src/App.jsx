@@ -16,6 +16,32 @@ const DELETE_FUNCTION = 'delete-local-record';
 const IMAGE_MAX_EDGE = 1600;
 const IMAGE_QUALITY = 0.72;
 const COMPRESSED_IMAGE_TYPE = 'image/jpeg';
+const LIFTING_DOCUMENTATION_ITEMS = [
+  'Procedimiento de trabajo',
+  'Difusion de procedimiento',
+  'Evaluacion de procedimiento',
+  'QRA (Matriz de riesgos)',
+  'Difusion de QRA',
+  'Respaldo de GCOM',
+  'Permisos aplicables',
+  'ART',
+  'Cartillas controles criticos',
+  'Checklists aplicables',
+  'Plan de emergencia',
+  'Plan transito del area',
+  'Certificaciones',
+  'Documentos del camion',
+];
+const LIFTING_MATERIALS = [
+  { name: 'PVC', density: 1400 },
+  { name: 'HDPE', density: 950 },
+  { name: 'Hormigon', density: 2400 },
+  { name: 'Cobre', density: 8960 },
+  { name: 'Acero carbono', density: 7850 },
+  { name: 'Acero inox', density: 8000 },
+  { name: 'Hierro', density: 7860 },
+  { name: 'Plomo', density: 11340 },
+];
 
 const initialMeasurement = {
   pile: '',
@@ -471,6 +497,63 @@ function calculateMeasurement(values) {
   return { samples, totalVolume, averageVolume, irrigationRate };
 }
 
+function onlyDigits(value) {
+  return value.replace(/\D/g, '');
+}
+
+function onlyLettersAndNumbers(value) {
+  return value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+function normalizePanel(value) {
+  return value.replace(/[^aAbB]/g, '').toUpperCase().slice(0, 1);
+}
+
+function toMeters(value, unit = 'm') {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return 0;
+  return unit === 'cm' ? number / 100 : number;
+}
+
+function formatWeight(value) {
+  if (!Number.isFinite(value) || value <= 0) return 'Ingrese valores';
+  if (value >= 1000) return `${(value / 1000).toFixed(2)} t`;
+  return `${value.toFixed(2)} kg`;
+}
+
+function calculateSlingGeometry(peso, n, l, h) {
+  if (l < h) throw new Error('La longitud de la eslinga debe ser mayor o igual a la altura.');
+  return {
+    angulo_grados: Math.asin(h / l) * (180 / Math.PI),
+    tension_eslinga: (peso / n) * (l / h),
+  };
+}
+
+function calculateCenterOfGravity(piezas) {
+  let peso_total = 0;
+  let suma_momentos = 0;
+
+  for (const pieza of piezas) {
+    peso_total += pieza.peso;
+    suma_momentos += pieza.peso * pieza.distancia_al_punto_cero;
+  }
+
+  if (peso_total === 0) return { peso_total: 0, CG_final: 0 };
+
+  return {
+    peso_total,
+    CG_final: suma_momentos / peso_total,
+  };
+}
+
+function calculateBoomGeometry(longitud_pluma, radio_operacion) {
+  if (longitud_pluma <= radio_operacion) throw new Error('El radio de operación debe ser menor que la longitud de pluma.');
+  return {
+    angulo_pluma_grados: Math.acos(radio_operacion / longitud_pluma) * (180 / Math.PI),
+    altura_punta_pluma: Math.sqrt((longitud_pluma * longitud_pluma) - (radio_operacion * radio_operacion)),
+  };
+}
+
 function App() {
   const [operator, setOperator] = useState('');
   const [accessRole, setAccessRole] = useState(null);
@@ -671,6 +754,22 @@ function App() {
       setMessage('Complete pila, fase, módulo y al menos un punto de volumen.');
       return;
     }
+    if (!/^\d+$/.test(measurement.pile)) {
+      setMessage('El campo pila debe contener solo números.');
+      return;
+    }
+    if (!/^[a-zA-Z0-9]+$/.test(measurement.phase)) {
+      setMessage('El campo fase debe contener solo letras y/o números.');
+      return;
+    }
+    if (!/^\d+$/.test(measurement.module)) {
+      setMessage('El campo módulo debe contener solo números.');
+      return;
+    }
+    if (measurement.panel && !/^[AB]$/i.test(measurement.panel)) {
+      setMessage('El campo paño solo puede ser A, B o quedar vacío.');
+      return;
+    }
     if (calc.irrigationRate === 0 && !measurement.observation.trim()) {
       setMessage('Indique una observación cuando la tasa sea igual a 0.');
       return;
@@ -679,9 +778,9 @@ function App() {
       id: createId(),
       operatorName: activeOperator,
       pile: measurement.pile,
-      phase: measurement.phase,
+      phase: measurement.phase.toUpperCase(),
       module: measurement.module,
-      panel: measurement.panel,
+      panel: measurement.panel.toUpperCase(),
       sample1: Number(measurement.sample1 || 0),
       sample2: Number(measurement.sample2 || 0),
       sample3: Number(measurement.sample3 || 0),
@@ -893,6 +992,18 @@ function App() {
         />
       )}
 
+      {screen === 'lifting' && (
+        <LiftingScreen
+          operator={activeOperator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          onBack={() => setScreen('menu')}
+          onTheme={toggleTheme}
+          onLogout={closeSession}
+          theme={theme}
+        />
+      )}
+
       {screen === 'admin' && accessRole === 'admin' && (
         <AdminScreen
           operator={activeOperator}
@@ -1026,6 +1137,7 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, mea
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
         <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
         <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
+        <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />
         {accessRole === 'admin' && (
           <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
         )}
@@ -1037,16 +1149,375 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, mea
   );
 }
 
-function MenuCard({ icon, title, desc, onClick, alt, brown }) {
+function MenuCard({ icon, title, desc, onClick, alt, brown, lifting }) {
   return (
     <button className="menu-card" type="button" onClick={onClick}>
-      <div className={`menu-card-icon ${alt ? 'alt' : ''} ${brown ? 'brown' : ''}`}>{icon}</div>
+      <div className={`menu-card-icon ${alt ? 'alt' : ''} ${brown ? 'brown' : ''} ${lifting ? 'lifting' : ''}`}>{icon}</div>
       <div className="menu-card-text">
         <div className="menu-card-title">{title}</div>
         <div className="menu-card-desc">{desc}</div>
       </div>
       <div className="menu-card-arrow">›</div>
     </button>
+  );
+}
+
+function LiftingScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
+  const [section, setSection] = useState('formulas');
+
+  return (
+    <section>
+      <Header title="Izajes" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
+      <div className="content">
+        <div className="lifting-menu">
+          <button className={section === 'formulas' ? 'active' : ''} type="button" onClick={() => setSection('formulas')}>Formulas</button>
+          <button className={section === 'weight' ? 'active' : ''} type="button" onClick={() => setSection('weight')}>Calculo de peso</button>
+          <button className={section === 'loadTables' ? 'active' : ''} type="button" onClick={() => setSection('loadTables')}>Tablas de carga</button>
+          <button className={section === 'documentation' ? 'active' : ''} type="button" onClick={() => setSection('documentation')}>Documentacion</button>
+        </div>
+
+        {section === 'formulas' && (
+          <>
+            <div className="section-heading">
+              <span>Modulo de formulas</span>
+              <h2>Izajes</h2>
+              <p>Herramientas de apoyo para evaluacion operacional de maniobras de izaje.</p>
+            </div>
+            <WorkCapacityCard />
+            <SlingGeometryCard />
+            <GravityCenterCard />
+            <BoomGeometryCard />
+          </>
+        )}
+
+        {section === 'weight' && <LiftingWeightCalculators />}
+        {section === 'loadTables' && <LiftingPlaceholder title="Tablas de carga" text="Seccion preparada para registrar o consultar tablas de carga de gruas y equipos." />}
+        {section === 'documentation' && <LiftingDocumentationChecklist />}
+      </div>
+    </section>
+  );
+}
+
+function WorkCapacityCard() {
+  const [values, setValues] = useState({ peso_carga: '', cap_grua: '' });
+  const pesoCarga = Number(values.peso_carga);
+  const capGrua = Number(values.cap_grua);
+  const hasValidValues = pesoCarga > 0 && capGrua > 0;
+  const percentage = hasValidValues ? (pesoCarga / capGrua) * 100 : 0;
+  const isHighLoad = percentage >= 75;
+
+  function updateValue(name, value) {
+    setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  return (
+    <div className="card lifting-formula-card">
+      <div className="card-title">Capacidad de trabajo</div>
+      <p className="formula-description">Calcula el porcentaje de utilizacion de la grua respecto del peso de la carga.</p>
+      <div className="form-row">
+        <Field label="Peso carga" type="number" value={values.peso_carga} onChange={(value) => updateValue('peso_carga', value)} />
+        <Field label="Capacidad grua" type="number" value={values.cap_grua} onChange={(value) => updateValue('cap_grua', value)} />
+      </div>
+      <div className={`work-capacity-result ${isHighLoad ? 'danger' : 'safe'}`}>
+        <span>Resultado</span>
+        <strong>{hasValidValues ? `${percentage.toFixed(2)}%` : 'Ingrese valores'}</strong>
+      </div>
+    </div>
+  );
+}
+
+function SlingGeometryCard() {
+  const [values, setValues] = useState({ peso: '', n: '', l: '', h: '' });
+  const peso = Number(values.peso);
+  const n = Number(values.n);
+  const l = Number(values.l);
+  const h = Number(values.h);
+  const hasValidValues = peso > 0 && n > 0 && l > 0 && h > 0;
+  const hasError = hasValidValues && l < h;
+  const result = hasValidValues && !hasError ? calculateSlingGeometry(peso, n, l, h) : null;
+
+  function updateValue(name, value) {
+    setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  return (
+    <div className="card lifting-formula-card">
+      <div className="card-title">Ángulo de trabajo y tensión de eslingas</div>
+      <p className="formula-description">Calcula el ángulo de trabajo y la tensión por eslinga según la configuración de izaje.</p>
+      <div className="form-row">
+        <Field label="Peso total" type="number" inputMode="decimal" value={values.peso} onChange={(value) => updateValue('peso', value)} />
+        <Field label="Número de eslingas" type="number" inputMode="numeric" value={values.n} onChange={(value) => updateValue('n', value)} />
+        <Field label="Longitud eslinga (L)" type="number" inputMode="decimal" value={values.l} onChange={(value) => updateValue('l', value)} />
+        <Field label="Altura gancho a carga (H)" type="number" inputMode="decimal" value={values.h} onChange={(value) => updateValue('h', value)} />
+      </div>
+      {hasError && <div className="weight-warning">La longitud de la eslinga debe ser mayor o igual a la altura.</div>}
+      <div className="formula-results-grid">
+        <FormulaResult label="Ángulo" value={result ? `${result.angulo_grados.toFixed(2)}°` : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
+        <FormulaResult label="Tensión por eslinga" value={result ? result.tension_eslinga.toFixed(2) : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
+      </div>
+    </div>
+  );
+}
+
+function GravityCenterCard() {
+  const [pieces, setPieces] = useState(() => [
+    { id: createId(), peso: '', distancia: '' },
+    { id: createId(), peso: '', distancia: '' },
+  ]);
+  const parsedPieces = pieces
+    .map((piece) => ({
+      peso: Number(piece.peso),
+      distancia_al_punto_cero: Number(piece.distancia),
+    }))
+    .filter((piece) => piece.peso > 0 && Number.isFinite(piece.distancia_al_punto_cero));
+  const result = calculateCenterOfGravity(parsedPieces);
+  const hasValidValues = result.peso_total > 0;
+
+  function updatePiece(id, key, value) {
+    setPieces((current) => current.map((piece) => (piece.id === id ? { ...piece, [key]: value } : piece)));
+  }
+
+  function addPiece() {
+    setPieces((current) => [...current, { id: createId(), peso: '', distancia: '' }]);
+  }
+
+  function removePiece(id) {
+    setPieces((current) => {
+      const next = current.filter((piece) => piece.id !== id);
+      return next.length ? next : [{ id: createId(), peso: '', distancia: '' }];
+    });
+  }
+
+  return (
+    <div className="card lifting-formula-card">
+      <div className="card-title">Centro de gravedad</div>
+      <p className="formula-description">Calcula el centro de gravedad de una carga asimétrica compuesta desde un punto cero definido.</p>
+      <div className="pieces-list">
+        {pieces.map((piece) => (
+          <div className="piece-row" key={piece.id}>
+            <Field label="Peso" type="number" inputMode="decimal" value={piece.peso} onChange={(value) => updatePiece(piece.id, 'peso', value)} />
+            <Field label="Distancia al punto cero" type="number" inputMode="decimal" value={piece.distancia} onChange={(value) => updatePiece(piece.id, 'distancia', value)} />
+            <button className="piece-remove" type="button" aria-label="Eliminar pieza" onClick={() => removePiece(piece.id)}>×</button>
+          </div>
+        ))}
+      </div>
+      <button className="btn-secondary checklist-clear" type="button" onClick={addPiece}>Agregar pieza</button>
+      <div className="formula-results-grid">
+        <FormulaResult label="Peso total" value={hasValidValues ? result.peso_total.toFixed(2) : 'Ingrese valores'} />
+        <FormulaResult label="CG final" value={hasValidValues ? result.CG_final.toFixed(2) : 'Ingrese valores'} />
+      </div>
+    </div>
+  );
+}
+
+function BoomGeometryCard() {
+  const [values, setValues] = useState({ longitud_pluma: '', radio_operacion: '' });
+  const longitudPluma = Number(values.longitud_pluma);
+  const radioOperacion = Number(values.radio_operacion);
+  const hasValidValues = longitudPluma > 0 && radioOperacion > 0;
+  const hasError = hasValidValues && radioOperacion >= longitudPluma;
+  const result = hasValidValues && !hasError ? calculateBoomGeometry(longitudPluma, radioOperacion) : null;
+
+  function updateValue(name, value) {
+    setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  return (
+    <div className="card lifting-formula-card">
+      <div className="card-title">Ángulo y altura de pluma</div>
+      <p className="formula-description">Calcula el ángulo de trabajo de la pluma y la altura de la punta según longitud y radio de operación.</p>
+      <div className="form-row">
+        <Field label="Longitud pluma (L)" type="number" inputMode="decimal" value={values.longitud_pluma} onChange={(value) => updateValue('longitud_pluma', value)} />
+        <Field label="Radio operación (R)" type="number" inputMode="decimal" value={values.radio_operacion} onChange={(value) => updateValue('radio_operacion', value)} />
+      </div>
+      {hasError && <div className="weight-warning">El radio de operación debe ser menor que la longitud de pluma.</div>}
+      <div className="formula-results-grid">
+        <FormulaResult label="Ángulo pluma" value={result ? `${result.angulo_pluma_grados.toFixed(2)}°` : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
+        <FormulaResult label="Altura punta pluma" value={result ? result.altura_punta_pluma.toFixed(2) : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
+      </div>
+    </div>
+  );
+}
+
+function FormulaResult({ label, value, status = 'safe' }) {
+  return (
+    <div className={`work-capacity-result ${status}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function LiftingWeightCalculators() {
+  const [material, setMaterial] = useState(LIFTING_MATERIALS[0].name);
+  const [solidTube, setSolidTube] = useState({
+    diameter: { value: '', unit: 'cm' },
+    length: { value: '', unit: 'm' },
+  });
+  const [emptyTube, setEmptyTube] = useState({
+    diameter: { value: '', unit: 'cm' },
+    thickness: { value: '', unit: 'cm' },
+    length: { value: '', unit: 'm' },
+  });
+  const [square, setSquare] = useState({
+    base: { value: '', unit: 'cm' },
+    height: { value: '', unit: 'cm' },
+    length: { value: '', unit: 'm' },
+  });
+  const density = LIFTING_MATERIALS.find((item) => item.name === material)?.density || 0;
+
+  const solidTubeVolume = Math.PI * (toMeters(solidTube.diameter.value, solidTube.diameter.unit) / 2) ** 2 * toMeters(solidTube.length.value, solidTube.length.unit);
+  const emptyTubeOuterRadius = toMeters(emptyTube.diameter.value, emptyTube.diameter.unit) / 2;
+  const emptyTubeThickness = toMeters(emptyTube.thickness.value, emptyTube.thickness.unit);
+  const emptyTubeInnerRadius = emptyTubeOuterRadius - emptyTubeThickness;
+  const invalidEmptyTubeThickness = emptyTubeOuterRadius > 0 && emptyTubeThickness > 0 && emptyTubeInnerRadius <= 0;
+  const emptyTubeVolume = emptyTubeInnerRadius > 0
+    ? Math.PI * toMeters(emptyTube.length.value, emptyTube.length.unit) * (emptyTubeOuterRadius ** 2 - emptyTubeInnerRadius ** 2)
+    : 0;
+  const squareVolume = toMeters(square.base.value, square.base.unit) * toMeters(square.height.value, square.height.unit) * toMeters(square.length.value, square.length.unit);
+
+  function updateMeasure(setter, key, patch) {
+    setter((current) => ({ ...current, [key]: { ...current[key], ...patch } }));
+  }
+
+  return (
+    <>
+      <div className="section-heading">
+        <span>Calculo de peso</span>
+        <h2>Material y geometria</h2>
+        <p>Seleccione material e ingrese cada dimension con su unidad correspondiente.</p>
+      </div>
+
+      <div className="card lifting-controls-card">
+        <div className="form-group">
+          <label htmlFor="lifting-material">Material</label>
+          <select id="lifting-material" value={material} onChange={(event) => setMaterial(event.target.value)}>
+            {LIFTING_MATERIALS.map((item) => (
+              <option value={item.name} key={item.name}>{item.name} - {item.density} kg/m3</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <WeightCalculatorCard
+        title="Tubo"
+        fields={[
+          { label: 'Diametro', value: solidTube.diameter, key: 'diameter' },
+          { label: 'Longitud', value: solidTube.length, key: 'length' },
+        ]}
+        volume={solidTubeVolume}
+        density={density}
+        onChange={(key, patch) => updateMeasure(setSolidTube, key, patch)}
+      />
+
+      <WeightCalculatorCard
+        title="Tubo vacio"
+        fields={[
+          { label: 'Diametro', value: emptyTube.diameter, key: 'diameter' },
+          { label: 'Espesor', value: emptyTube.thickness, key: 'thickness' },
+          { label: 'Longitud', value: emptyTube.length, key: 'length' },
+        ]}
+        volume={emptyTubeVolume}
+        density={density}
+        warning={invalidEmptyTubeThickness ? 'El diametro debe ser mayor que el doble del espesor.' : ''}
+        onChange={(key, patch) => updateMeasure(setEmptyTube, key, patch)}
+      />
+
+      <WeightCalculatorCard
+        title="Cuadrado"
+        fields={[
+          { label: 'Base', value: square.base, key: 'base' },
+          { label: 'Altura', value: square.height, key: 'height' },
+          { label: 'Longitud', value: square.length, key: 'length' },
+        ]}
+        volume={squareVolume}
+        density={density}
+        onChange={(key, patch) => updateMeasure(setSquare, key, patch)}
+      />
+    </>
+  );
+}
+
+function WeightCalculatorCard({ title, fields, volume, density, warning = '', onChange }) {
+  const weight = volume * density;
+
+  return (
+    <div className="card weight-calculator-card">
+      <div className="card-title">{title}</div>
+      <div className="weight-fields">
+        {fields.map((field) => (
+          <div className="measure-field" key={field.key}>
+            <Field
+              label={field.label}
+              type="number"
+              inputMode="decimal"
+              value={field.value.value}
+              onChange={(value) => onChange(field.key, { value })}
+            />
+            <div className="field-unit-toggle" role="group" aria-label={`Unidad ${field.label}`}>
+              <button className={field.value.unit === 'cm' ? 'active' : ''} type="button" onClick={() => onChange(field.key, { unit: 'cm' })}>cm</button>
+              <button className={field.value.unit === 'm' ? 'active' : ''} type="button" onClick={() => onChange(field.key, { unit: 'm' })}>m</button>
+            </div>
+          </div>
+        ))}
+      </div>
+      {warning && <div className="weight-warning">{warning}</div>}
+      <div className="weight-result">
+        <span>Peso</span>
+        <strong>{formatWeight(weight)}</strong>
+      </div>
+    </div>
+  );
+}
+
+function LiftingPlaceholder({ title, text }) {
+  return (
+    <div className="card lifting-placeholder">
+      <div className="card-title">{title}</div>
+      <p>{text}</p>
+    </div>
+  );
+}
+
+function LiftingDocumentationChecklist() {
+  const [checked, setChecked] = useState(() => Object.fromEntries(LIFTING_DOCUMENTATION_ITEMS.map((item) => [item, false])));
+  const completed = LIFTING_DOCUMENTATION_ITEMS.filter((item) => checked[item]).length;
+  const total = LIFTING_DOCUMENTATION_ITEMS.length;
+  const percentage = Math.round((completed / total) * 100);
+
+  function toggleItem(item) {
+    setChecked((current) => ({ ...current, [item]: !current[item] }));
+  }
+
+  function clearChecklist() {
+    setChecked(Object.fromEntries(LIFTING_DOCUMENTATION_ITEMS.map((item) => [item, false])));
+  }
+
+  return (
+    <div className="card lifting-checklist-card">
+      <div className="checklist-head">
+        <div>
+          <div className="card-title">Documentacion previa a maniobra</div>
+          <p>Verifique los antecedentes obligatorios antes de iniciar la maniobra de izaje.</p>
+        </div>
+        <div className="checklist-progress">
+          <strong>{completed}/{total}</strong>
+          <span>{percentage}%</span>
+        </div>
+      </div>
+
+      <div className="checklist-items">
+        {LIFTING_DOCUMENTATION_ITEMS.map((item, index) => (
+          <label className={`checklist-item ${checked[item] ? 'checked' : ''}`} key={item}>
+            <input type="checkbox" checked={checked[item]} onChange={() => toggleItem(item)} />
+            <span className="checklist-index">{String(index + 1).padStart(2, '0')}</span>
+            <span className="checklist-label">{item}</span>
+          </label>
+        ))}
+      </div>
+
+      <button className="btn-secondary checklist-clear" type="button" onClick={clearChecklist}>Limpiar checklist</button>
+    </div>
   );
 }
 
@@ -1088,12 +1559,12 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
             <div className="card">
               <div className="card-title">Identificación</div>
               <div className="form-row">
-                <Field label="Pila" value={measurement.pile} onChange={(value) => setMeasurement({ ...measurement, pile: value })} />
-                <Field label="Fase" value={measurement.phase} onChange={(value) => setMeasurement({ ...measurement, phase: value })} />
+                <Field label="Pila" inputMode="numeric" value={measurement.pile} onChange={(value) => setMeasurement({ ...measurement, pile: onlyDigits(value) })} />
+                <Field label="Fase" value={measurement.phase} onChange={(value) => setMeasurement({ ...measurement, phase: onlyLettersAndNumbers(value) })} />
               </div>
               <div className="form-row">
-                <Field label="Módulo" value={measurement.module} onChange={(value) => setMeasurement({ ...measurement, module: value })} />
-                <Field label="Paño" value={measurement.panel} onChange={(value) => setMeasurement({ ...measurement, panel: value })} />
+                <Field label="Módulo" inputMode="numeric" value={measurement.module} onChange={(value) => setMeasurement({ ...measurement, module: onlyDigits(value) })} />
+                <Field label="Paño" maxLength={1} value={measurement.panel} onChange={(value) => setMeasurement({ ...measurement, panel: normalizePanel(value) })} />
               </div>
             </div>
 
@@ -1101,7 +1572,7 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
               <div>
                 <div className="timer-label">Cronómetro de muestreo</div>
                 <div className="timer-value">00:{String(timerSeconds).padStart(2, '0')}</div>
-                <div className="timer-desc">{timerSeconds === 0 ? 'Tiempo finalizado' : 'Cuenta regresiva de 36 segundos'}</div>
+                <div className="timer-desc">{timerSeconds === 0 ? 'Finalizado' : 'Cuenta regresiva de 36 segundos'}</div>
               </div>
               <div className="timer-actions">
                 <button className="btn-save compact" type="button" onClick={startTimer} disabled={timerRunning}>
@@ -1121,6 +1592,10 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
               <div className="vol-result">
                 <span>Volumen total</span>
                 <strong>{preview.totalVolume.toFixed(2)} mL</strong>
+              </div>
+              <div className="vol-result secondary">
+                <span>Promedio</span>
+                <strong>{preview.averageVolume.toFixed(2)} mL</strong>
               </div>
             </div>
 
@@ -1159,11 +1634,11 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
   );
 }
 
-function Field({ label, value, onChange, type = 'text' }) {
+function Field({ label, value, onChange, type = 'text', inputMode, maxLength }) {
   return (
     <div className="form-group">
       <label>{label}</label>
-      <input type={type} value={value} onChange={(event) => onChange(event.target.value)} />
+      <input type={type} inputMode={inputMode} maxLength={maxLength} value={value} onChange={(event) => onChange(event.target.value)} />
     </div>
   );
 }
@@ -1192,7 +1667,11 @@ function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onShareHis
           <div className="rec-header">
             <div>
               <strong>Pila {record.pile} · Fase {record.phase} · Módulo {record.module} · Paño {record.panel || '-'}</strong>
-              <p>{formatDate(record.createdAt)} · {record.operatorName}</p>
+              <p className="record-meta">
+                <span>{formatDate(record.createdAt)} · {record.operatorName}</span>
+                <span>Total: {Number(record.totalVolume || 0).toFixed(2)} mL</span>
+                <span>Promedio: {Number(record.averageVolume || 0).toFixed(2)} mL</span>
+              </p>
             </div>
             <span className={`sync-pill ${record.syncStatus === 'synced' ? 'synced' : ''}`}>{record.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
             <button
@@ -1562,3 +2041,4 @@ function AdminDocuments({ rows }) {
 }
 
 export default App;
+
