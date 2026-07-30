@@ -38,23 +38,42 @@ create table if not exists public.conduction_documents (
 alter table public.conduction_documents
 drop column if exists status;
 
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+    and not exists (
+      select 1
+      from pg_publication_tables
+      where pubname = 'supabase_realtime'
+        and schemaname = 'public'
+        and tablename = 'conduction_documents'
+    )
+  then
+    alter publication supabase_realtime add table public.conduction_documents;
+  end if;
+end $$;
+
 alter table public.irrigation_measurements enable row level security;
 alter table public.conduction_documents enable row level security;
 
-grant insert on public.irrigation_measurements to anon, authenticated;
+revoke all on public.irrigation_measurements from anon;
+revoke all on public.conduction_documents from anon;
+grant insert on public.irrigation_measurements to authenticated;
 grant select on public.irrigation_measurements to authenticated;
+grant update on public.irrigation_measurements to authenticated;
 grant delete on public.irrigation_measurements to authenticated;
-grant insert on public.conduction_documents to anon, authenticated;
+grant insert on public.conduction_documents to authenticated;
 grant select on public.conduction_documents to authenticated;
+grant update on public.conduction_documents to authenticated;
 revoke update on public.conduction_documents from anon;
-revoke update on public.conduction_documents from authenticated;
 grant delete on public.conduction_documents to authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
-create policy "Public can insert irrigation measurements"
+drop policy if exists "Authenticated users can insert irrigation measurements" on public.irrigation_measurements;
+create policy "Authenticated users can insert irrigation measurements"
 on public.irrigation_measurements
 for insert
-to anon, authenticated
+to authenticated
 with check (
   length(trim(operator_name)) between 1 and 120
   and length(trim(pile)) between 1 and 80
@@ -84,11 +103,33 @@ for delete
 to authenticated
 using (owner_id = (select auth.uid()));
 
+drop policy if exists "Operator can update own irrigation measurements" on public.irrigation_measurements;
+create policy "Operator can update own irrigation measurements"
+on public.irrigation_measurements
+for update
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (
+  owner_id = (select auth.uid())
+  and length(trim(operator_name)) between 1 and 120
+  and length(trim(pile)) between 1 and 80
+  and length(trim(phase)) between 1 and 80
+  and length(trim(module)) between 1 and 80
+  and sample_1_ml >= 0
+  and sample_2_ml >= 0
+  and sample_3_ml >= 0
+  and total_volume_ml >= 0
+  and average_volume_ml >= 0
+  and irrigation_rate_lh >= 0
+  and measured_at <= now() + interval '1 day'
+);
+
 drop policy if exists "Public can insert conduction documents" on public.conduction_documents;
-create policy "Public can insert conduction documents"
+drop policy if exists "Authenticated users can insert conduction documents" on public.conduction_documents;
+create policy "Authenticated users can insert conduction documents"
 on public.conduction_documents
 for insert
-to anon, authenticated
+to authenticated
 with check (
   length(trim(driver_name)) between 1 and 120
   and length(trim(file_name)) between 1 and 255
@@ -112,16 +153,30 @@ to authenticated
 using (owner_id = (select auth.uid()));
 
 drop policy if exists "Authenticated users can update conduction document status" on public.conduction_documents;
+drop policy if exists "Operator can update own conduction documents" on public.conduction_documents;
+create policy "Operator can update own conduction documents"
+on public.conduction_documents
+for update
+to authenticated
+using (owner_id = (select auth.uid()))
+with check (
+  owner_id = (select auth.uid())
+  and length(trim(driver_name)) between 1 and 120
+  and length(trim(file_name)) between 1 and 255
+  and length(trim(file_path)) between 1 and 500
+  and uploaded_at <= now() + interval '1 day'
+);
 
 insert into storage.buckets (id, name, public)
 values ('conduction-documents', 'conduction-documents', false)
 on conflict (id) do nothing;
 
 drop policy if exists "Public can upload conduction documents" on storage.objects;
-create policy "Public can upload conduction documents"
+drop policy if exists "Authenticated users can upload conduction documents" on storage.objects;
+create policy "Authenticated users can upload conduction documents"
 on storage.objects
 for insert
-to anon, authenticated
+to authenticated
 with check (bucket_id = 'conduction-documents');
 
 drop policy if exists "Authenticated users can read conduction document files" on storage.objects;

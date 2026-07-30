@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="es" data-theme="day">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App - Previsualización UI Terreno</title>
+    <style>
+      :root {
+        --brand-900: #061744;
+        --brand-800: #08256f;
+        --brand-700: #0b4fb3;
+        --brand-600: #1268d6;
+        --brand-500: #2f7cff;
+        --brand-100: #d8e8fb;
+        --green: #166d46;
+        --green-soft: #dff6e9;
+        --amber: #9a6100;
+        --amber-soft: #fff0ce;
+        --red: #b3261e;
+        --red-soft: #ffe1df;
+        --radius: 8px;
+        --touch: 48px;
+        --shadow-1: 0 10px 24px rgba(6, 23, 68, 0.18);
+        --shadow-2: 0 18px 42px rgba(6, 23, 68, 0.24);
+        --safe-top: env(safe-area-inset-top);
+        --safe-bottom: env(safe-area-inset-bottom);
+      }
+
+      :root[data-theme="day"] {
+        --page: #9fb2ca;
+        --app: #c9d8e8;
+        --surface: #eef5fc;
+        --surface-2: #dce9f5;
+        --surface-3: #c5d7e9;
+        --line: #557092;
+        --line-soft: #7892b1;
+        --text: #031235;
+        --text-2: #173461;
+        --text-3: #355174;
+        --inverse: #ffffff;
+        --header: linear-gradient(180deg, #061744 0%, #0b4fb3 100%);
+        --primary: #0647a5;
+        --primary-text: #ffffff;
+        --secondary: #d8e8fb;
+        --secondary-text: #061744;
+        --focus: rgba(6, 71, 165, 0.22);
+        color-scheme: light;
+      }
+
+      :root[data-theme="night"] {
+        --page: #050c16;
+        --app: #07111f;
+        --surface: #101c2d;
+        --surface-2: #132238;
+        --surface-3: #19314f;
+        --line: #4a6684;
+        --line-soft: #314967;
+        --text: #eef5ff;
+        --text-2: #c9d7e8;
+        --text-3: #a8b7ca;
+        --inverse: #06101d;
+        --header: linear-gradient(180deg, #06101d 0%, #12365f 100%);
+        --primary: #58afff;
+        --primary-text: #06101d;
+        --secondary: #143556;
+        --secondary-text: #d8ecff;
+        --focus: rgba(140, 199, 255, 0.2);
+        --green: #75e0a7;
+        --green-soft: #0f3327;
+        --amber: #ffd37a;
+        --amber-soft: #3a2a0d;
+        --red: #ff9a8f;
+        --red-soft: #3a1e22;
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        min-height: 100vh;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--page);
+        color: var(--text);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .preview-shell {
+        width: min(1280px, 100%);
+        margin: 0 auto;
+        padding: 24px;
+      }
+
+      .preview-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .preview-title {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .preview-title img {
+        width: 52px;
+        height: 52px;
+        border: 2px solid rgba(255, 255, 255, 0.42);
+        border-radius: var(--radius);
+        object-fit: cover;
+      }
+
+      .preview-title h1 {
+        margin: 0;
+        color: #ffffff;
+        font-size: 24px;
+        line-height: 1.1;
+      }
+
+      .preview-title p {
+        margin: 4px 0 0;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 14px;
+      }
+
+      .theme-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        min-height: var(--touch);
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: var(--radius);
+        background: rgba(6, 23, 68, 0.34);
+      }
+
+      .theme-switch button {
+        min-width: 88px;
+        min-height: 40px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.78);
+        font-weight: 850;
+      }
+
+      :root[data-theme="day"] .theme-day,
+      :root[data-theme="night"] .theme-night {
+        background: #ffffff;
+        color: #061744;
+      }
+
+      .phone-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(250px, 1fr));
+        gap: 20px;
+      }
+
+      .phone {
+        min-height: 760px;
+        overflow: hidden;
+        border: 8px solid #020817;
+        border-radius: 30px;
+        background: var(--app);
+        box-shadow: var(--shadow-2);
+      }
+
+      .app {
+        min-height: 760px;
+        background: var(--app);
+      }
+
+      .app-header {
+        padding: calc(14px + var(--safe-top)) 14px 14px;
+        background: var(--header);
+        color: #ffffff;
+      }
+
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .brand-block {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        gap: 10px;
+      }
+
+      .brand-block img {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 auto;
+        border-radius: var(--radius);
+        object-fit: cover;
+      }
+
+      .brand-copy {
+        min-width: 0;
+      }
+
+      .brand-copy strong,
+      .brand-copy span {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .brand-copy strong {
+        font-size: 16px;
+        font-weight: 950;
+      }
+
+      .brand-copy span {
+        margin-top: 2px;
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 12px;
+        font-weight: 750;
+      }
+
+      .icon-button,
+      .back-button {
+        display: inline-grid;
+        min-width: var(--touch);
+        min-height: var(--touch);
+        place-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+      }
+
+      .back-button {
+        grid-auto-flow: column;
+        gap: 8px;
+        padding: 0 12px;
+        font-weight: 850;
+      }
+
+      .icon-button svg,
+      .back-button svg {
+        width: 22px;
+        height: 22px;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        fill: none;
+      }
+
+      .header-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .header-stat {
+        min-height: 74px;
+        padding: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .header-stat span {
+        display: block;
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .header-stat b {
+        display: block;
+        margin-top: 6px;
+        color: #ffffff;
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .content {
+        padding: 16px 14px calc(18px + var(--safe-bottom));
+      }
+
+      .section-title {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .section-title h2 {
+        margin: 0;
+        color: var(--text);
+        font-size: 20px;
+        line-height: 1.1;
+      }
+
+      .section-title span {
+        color: var(--text-3);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      .card,
+      .module-card,
+      .metric-card,
+      .form-card,
+      .table-card {
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: var(--shadow-1);
+      }
+
+      .module-card {
+        display: grid;
+        grid-template-columns: 50px minmax(0, 1fr) 32px;
+        align-items: center;
+        gap: 12px;
+        min-height: 94px;
+        padding: 14px;
+        margin-bottom: 10px;
+        color: inherit;
+        text-align: left;
+      }
+
+      .module-icon {
+        display: grid;
+        width: 50px;
+        height: 50px;
+        place-items: center;
+        border-radius: var(--radius);
+        background: var(--brand-800);
+        color: #ffffff;
+      }
+
+      .module-icon svg {
+        width: 26px;
+        height: 26px;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        fill: none;
+      }
+
+      .module-card h3 {
+        margin: 0;
+        color: var(--text);
+        font-size: 16px;
+        line-height: 1.15;
+      }
+
+      .module-card p {
+        margin: 5px 0 0;
+        color: var(--text-2);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .chevron {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: var(--radius);
+        background: var(--secondary);
+        color: var(--secondary-text);
+      }
+
+      .chevron svg {
+        width: 18px;
+        height: 18px;
+        stroke: currentColor;
+        stroke-width: 2.4;
+        fill: none;
+      }
+
+      .primary-button,
+      .secondary-button,
+      .danger-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        min-height: 52px;
+        padding: 0 14px;
+        border-radius: var(--radius);
+        font-weight: 950;
+      }
+
+      .primary-button {
+        border: 1px solid var(--primary);
+        background: var(--primary);
+        color: var(--primary-text);
+        box-shadow: 0 12px 22px rgba(6, 71, 165, 0.28);
+      }
+
+      .secondary-button {
+        border: 1.5px solid var(--line);
+        background: var(--secondary);
+        color: var(--secondary-text);
+      }
+
+      .danger-button {
+        border: 1.5px solid var(--red);
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .status-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 14px 0;
+      }
+
+      .status-pill {
+        min-height: 46px;
+        padding: 9px 10px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+      }
+
+      .status-pill span {
+        display: block;
+        color: var(--text-3);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .status-pill b {
+        display: block;
+        margin-top: 2px;
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .status-ok b {
+        color: var(--green);
+      }
+
+      .status-warn b {
+        color: var(--amber);
+      }
+
+      .form-card {
+        padding: 14px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 11px;
+      }
+
+      label {
+        color: var(--text-2);
+        font-size: 11px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      input {
+        width: 100%;
+        min-height: var(--touch);
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        color: var(--text);
+        padding: 0 12px;
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      input:focus,
+      button:focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .timer-band,
+      .result-band {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        min-height: 68px;
+        padding: 12px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+      }
+
+      .timer-band {
+        margin-bottom: 12px;
+      }
+
+      .timer-band span,
+      .result-band span {
+        color: var(--text-2);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .timer-band b,
+      .result-band b {
+        color: var(--brand-700);
+        font-size: 28px;
+        line-height: 1;
+      }
+
+      :root[data-theme="night"] .timer-band b,
+      :root[data-theme="night"] .result-band b {
+        color: var(--primary);
+      }
+
+      .complete {
+        border-color: var(--green);
+        background: var(--green-soft);
+      }
+
+      .complete b,
+      .complete span {
+        color: var(--green);
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 4px;
+        min-height: var(--touch);
+        padding: 4px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        margin-bottom: 12px;
+      }
+
+      .tabs button {
+        min-height: 40px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--text-2);
+        font-weight: 900;
+      }
+
+      .tabs button.active {
+        background: var(--primary);
+        color: var(--primary-text);
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .metric-card {
+        min-height: 92px;
+        padding: 12px;
+      }
+
+      .metric-card span {
+        display: block;
+        color: var(--text-3);
+        font-size: 10px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      .metric-card b {
+        display: block;
+        margin-top: 8px;
+        color: var(--text);
+        font-size: 25px;
+        line-height: 1;
+      }
+
+      .metric-card strong {
+        display: block;
+        margin-top: 7px;
+        color: var(--green);
+        font-size: 13px;
+      }
+
+      .doc-upload {
+        padding: 14px;
+        border: 2px dashed var(--brand-700);
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        text-align: center;
+      }
+
+      .doc-upload svg {
+        width: 34px;
+        height: 34px;
+        color: var(--brand-700);
+        stroke: currentColor;
+        stroke-width: 2;
+        fill: none;
+      }
+
+      .doc-upload b {
+        display: block;
+        margin-top: 8px;
+        color: var(--text);
+      }
+
+      .doc-upload span {
+        display: block;
+        margin-top: 4px;
+        color: var(--text-2);
+        font-size: 13px;
+      }
+
+      .thumb-row {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .thumb {
+        display: grid;
+        grid-template-columns: 46px 1fr 44px;
+        align-items: center;
+        gap: 10px;
+        min-height: 62px;
+        padding: 8px;
+        border: 1.5px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+      }
+
+      .thumb-preview {
+        height: 46px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, var(--brand-800), var(--brand-500));
+      }
+
+      .thumb b,
+      .thumb span {
+        display: block;
+      }
+
+      .thumb b {
+        color: var(--text);
+        font-size: 14px;
+      }
+
+      .thumb span {
+        margin-top: 3px;
+        color: var(--text-3);
+        font-size: 12px;
+      }
+
+      .table-card {
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 11px 10px;
+        border-bottom: 1px solid var(--line-soft);
+        text-align: left;
+      }
+
+      th {
+        background: var(--surface-2);
+        color: var(--text-2);
+        font-size: 10px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .bottom-nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 6px;
+        padding: 10px 14px calc(12px + var(--safe-bottom));
+        border-top: 1.5px solid var(--line);
+        background: var(--surface);
+      }
+
+      .bottom-nav button {
+        display: grid;
+        min-height: 52px;
+        place-items: center;
+        border: 0;
+        border-radius: var(--radius);
+        background: transparent;
+        color: var(--text-3);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .bottom-nav button.active {
+        background: var(--secondary);
+        color: var(--secondary-text);
+      }
+
+      .bottom-nav svg {
+        width: 20px;
+        height: 20px;
+        margin-bottom: 3px;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        fill: none;
+      }
+
+      .login-panel {
+        display: grid;
+        align-content: center;
+        min-height: 760px;
+        padding: 28px 18px;
+        background: var(--header);
+      }
+
+      .login-logo {
+        display: grid;
+        justify-items: center;
+        gap: 14px;
+        color: #ffffff;
+        text-align: center;
+      }
+
+      .login-logo img {
+        width: 108px;
+        height: 108px;
+        border: 3px solid rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius);
+        object-fit: cover;
+      }
+
+      .login-logo h2 {
+        margin: 0;
+        font-size: 28px;
+      }
+
+      .login-actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 34px;
+      }
+
+      .login-actions .primary-button {
+        background: #ffffff;
+        color: var(--brand-900);
+        border-color: #ffffff;
+      }
+
+      .login-actions .secondary-button {
+        border-color: rgba(255, 255, 255, 0.38);
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+      }
+
+      @media (max-width: 1140px) {
+        .phone-grid {
+          grid-template-columns: repeat(2, minmax(260px, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .preview-shell {
+          padding: 16px 12px;
+        }
+
+        .preview-top {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .phone-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .phone {
+          border-width: 0;
+          border-radius: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="preview-shell">
+      <header class="preview-top">
+        <div class="preview-title">
+          <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+          <div>
+            <h1>Mantos App</h1>
+            <p>Previsualización visual para uso en terreno</p>
+          </div>
+        </div>
+        <div class="theme-switch" aria-label="Selector de tema">
+          <button class="theme-day" type="button" onclick="setTheme('day')">Día</button>
+          <button class="theme-night" type="button" onclick="setTheme('night')">Noche</button>
+        </div>
+      </header>
+
+      <section class="phone-grid" aria-label="Pantallas de referencia">
+        <article class="phone">
+          <section class="login-panel">
+            <div class="login-logo">
+              <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+              <h2>Mantos Group</h2>
+            </div>
+            <div class="login-actions">
+              <button class="primary-button" type="button">Acceder como administrador</button>
+              <button class="secondary-button" type="button">Acceder como usuario</button>
+            </div>
+          </section>
+        </article>
+
+        <article class="phone">
+          <section class="app">
+            <header class="app-header">
+              <div class="header-row">
+                <div class="brand-block">
+                  <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                  <div class="brand-copy">
+                    <strong>Menu principal</strong>
+                    <span>Operador: Ian Fuentes</span>
+                  </div>
+                </div>
+                <button class="icon-button" type="button" aria-label="Cerrar sesion">
+                  <svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M12 3h7v18h-7"/></svg>
+                </button>
+              </div>
+              <div class="header-stats">
+                <div class="header-stat"><span>Estado</span><b>Línea</b></div>
+                <div class="header-stat"><span>Pendientes</span><b>02</b></div>
+                <div class="header-stat"><span>Turno</span><b>A</b></div>
+              </div>
+            </header>
+            <div class="content">
+              <div class="section-title">
+                <h2>Operacion</h2>
+                <span>Acceso rapido</span>
+              </div>
+              <button class="module-card" type="button">
+                <span class="module-icon"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+                <div>
+                  <h3>Medición tasa de riego</h3>
+                  <p>Registro, historial y exportación compatible.</p>
+                </div>
+                <span class="chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+              </button>
+              <button class="module-card" type="button">
+                <span class="module-icon"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 19V9l5-4 5 4v10"/><path d="M10 13h4"/></svg></span>
+                <div>
+                  <h3>Conducción</h3>
+                  <p>Documentación operacional y respaldo diario.</p>
+                </div>
+                <span class="chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+              </button>
+              <button class="module-card" type="button">
+                <span class="module-icon"><svg viewBox="0 0 24 24"><path d="M12 3v5"/><path d="M6 9h12l-2 10H8z"/><path d="M8 9l4-4 4 4"/></svg></span>
+                <div>
+                  <h3>Izajes</h3>
+                  <p>Cálculos, checklist y control previo.</p>
+                </div>
+                <span class="chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+              </button>
+              <div class="status-row">
+                <div class="status-pill status-ok"><span>Supabase</span><b>Operativo</b></div>
+                <div class="status-pill status-warn"><span>Offline</span><b>Preparado</b></div>
+              </div>
+              <button class="primary-button" type="button">Sincronizar pendientes</button>
+            </div>
+            <nav class="bottom-nav" aria-label="Navegacion principal">
+              <button class="active" type="button"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Inicio</button>
+              <button type="button"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h4"/></svg>Tasa</button>
+              <button type="button"><svg viewBox="0 0 24 24"><path d="M12 3v5"/><path d="M6 9h12l-2 10H8z"/></svg>Izajes</button>
+              <button type="button"><svg viewBox="0 0 24 24"><path d="M4 19h16"/><path d="M7 19V9l5-4 5 4v10"/></svg>Docs</button>
+            </nav>
+          </section>
+        </article>
+
+        <article class="phone">
+          <section class="app">
+            <header class="app-header">
+              <div class="header-row">
+                <button class="back-button" type="button"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>Volver</button>
+                <button class="icon-button" type="button" aria-label="Cambiar tema">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/><circle cx="12" cy="12" r="4"/></svg>
+                </button>
+              </div>
+              <div class="header-stats">
+                <div class="header-stat"><span>Total</span><b>45 L</b></div>
+                <div class="header-stat"><span>Promedio</span><b>15 L</b></div>
+                <div class="header-stat"><span>Tasa</span><b>4.4</b></div>
+              </div>
+            </header>
+            <div class="content">
+              <div class="section-title">
+                <h2>Tasa de riego</h2>
+                <span>Captura</span>
+              </div>
+              <div class="timer-band complete">
+                <span>Cronómetro</span>
+                <b>Finalizado</b>
+              </div>
+              <form class="form-card">
+                <div class="field-grid">
+                  <div class="field">
+                    <label for="pila">Pila</label>
+                    <input id="pila" type="text" inputmode="numeric" value="12" />
+                  </div>
+                  <div class="field">
+                    <label for="fase">Fase</label>
+                    <input id="fase" type="text" value="A1" />
+                  </div>
+                </div>
+                <div class="field-grid">
+                  <div class="field">
+                  <label for="pano">Paño</label>
+                    <input id="pano" type="text" value="B" />
+                  </div>
+                  <div class="field">
+                  <label for="modulo">Módulo</label>
+                    <input id="modulo" type="text" inputmode="numeric" value="3" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="volumen">Volumen de muestra</label>
+                  <input id="volumen" type="number" value="15" />
+                </div>
+                <div class="result-band">
+                  <span>Resultado calculado</span>
+                  <b>4.40 L/h</b>
+                </div>
+              </form>
+              <div style="height: 12px"></div>
+              <button class="primary-button" type="button">Guardar medición</button>
+            </div>
+          </section>
+        </article>
+
+        <article class="phone">
+          <section class="app">
+            <header class="app-header">
+              <div class="header-row">
+                <div class="brand-block">
+                  <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                  <div class="brand-copy">
+                    <strong>Panel admin</strong>
+                    <span>Resumen operacional</span>
+                  </div>
+                </div>
+                <button class="icon-button" type="button" aria-label="Exportar reporte">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+                </button>
+              </div>
+              <div class="header-stats">
+                <div class="header-stat"><span>Mediciones</span><b>108</b></div>
+                <div class="header-stat"><span>Docs</span><b>42</b></div>
+                <div class="header-stat"><span>Alertas</span><b>03</b></div>
+              </div>
+            </header>
+            <div class="content">
+              <div class="tabs">
+                <button class="active" type="button">Tasa</button>
+                <button type="button">Conduc.</button>
+                <button type="button">Izajes</button>
+              </div>
+              <div class="metric-grid">
+                <div class="metric-card"><span>Promedio dia</span><b>16.8</b><strong>Dentro de rango</strong></div>
+                <div class="metric-card"><span>Sincronizado</span><b>96%</b><strong>Estable</strong></div>
+              </div>
+              <div class="table-card">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Operador</th>
+                      <th>Pila</th>
+                      <th>Tasa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Ian</td>
+                      <td>12-A1</td>
+                      <td>18.4</td>
+                    </tr>
+                    <tr>
+                      <td>Turno A</td>
+                      <td>13-B2</td>
+                      <td>15.1</td>
+                    </tr>
+                    <tr>
+                      <td>Operador</td>
+                      <td>14-A3</td>
+                      <td>0.0</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="height: 12px"></div>
+              <div class="doc-upload">
+                <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M4 17v3h16v-3"/></svg>
+                <b>Documentación diaria</b>
+                <span>Zona de carga centrada y visible</span>
+              </div>
+              <div class="thumb-row">
+                <div class="thumb">
+                  <span class="thumb-preview"></span>
+                  <span><b>Licencia conductor</b><span>Subido 08:42</span></span>
+                  <button class="danger-button" type="button" aria-label="Eliminar documento">X</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      function setTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+      }
+    </script>
+  </body>
+</html>

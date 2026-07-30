@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App - Modo Oscuro</title>
+    <style>
+      :root {
+        --bg: #07111f;
+        --shell: #0a1626;
+        --card: #101c2d;
+        --raised: #132238;
+        --border: #314967;
+        --border-strong: #4a6684;
+        --text: #eef5ff;
+        --secondary: #c7d3e3;
+        --muted: #a8b7ca;
+        --blue: #8cc7ff;
+        --blue-fill: #1f6fcb;
+        --success: #75e0a7;
+        --success-bg: #0f3327;
+        --warning: #ffd37a;
+        --warning-bg: #3a2a0d;
+        --danger: #ff9a8f;
+        --danger-bg: #3a1e22;
+        --shadow: 0 16px 34px rgba(0, 0, 0, 0.46);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 86% 8%, rgba(140, 199, 255, 0.13), transparent 28%),
+          linear-gradient(180deg, var(--bg), var(--shell));
+        color: var(--text);
+      }
+
+      .page {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+        padding: 34px 22px 48px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        padding: 8px 12px;
+        border: 1px solid rgba(140, 199, 255, 0.3);
+        border-radius: 999px;
+        background: #143556;
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 14px 0 0;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1;
+      }
+
+      .hero p,
+      small,
+      .muted {
+        color: var(--secondary);
+        line-height: 1.5;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+      }
+
+      .phone {
+        min-height: 700px;
+        overflow: hidden;
+        border: 10px solid #020817;
+        border-radius: 40px;
+        background: linear-gradient(180deg, var(--bg), var(--shell));
+        box-shadow: var(--shadow);
+      }
+
+      .screen {
+        padding: 16px;
+      }
+
+      .topbar,
+      .summary,
+      .admin-head {
+        border: 1px solid rgba(158, 208, 255, 0.24);
+        border-radius: 24px;
+        background: linear-gradient(135deg, #06101d, #1f6fcb);
+        box-shadow: var(--shadow);
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .brand img {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        object-fit: cover;
+      }
+
+      .brand b,
+      .brand span {
+        display: block;
+      }
+
+      .brand span,
+      .summary p {
+        color: rgba(255, 255, 255, 0.84);
+        font-size: 12px;
+      }
+
+      .pill {
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .card {
+        padding: 16px;
+        border: 1.5px solid var(--border);
+        border-radius: 22px;
+        margin-bottom: 12px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .summary {
+        padding: 18px;
+        margin-bottom: 14px;
+      }
+
+      .summary span,
+      label,
+      th {
+        color: var(--secondary);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .summary strong {
+        display: block;
+        margin-top: 7px;
+        color: #fff;
+        font-size: 25px;
+      }
+
+      .module {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 13px;
+        align-items: center;
+        min-height: 98px;
+      }
+
+      .icon {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        border-radius: 18px;
+        background: var(--blue-fill);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .icon.dark {
+        background: #143556;
+        color: var(--blue);
+      }
+
+      .card strong,
+      td {
+        color: var(--text);
+      }
+
+      .card small {
+        display: block;
+        margin-top: 4px;
+      }
+
+      .button {
+        width: 100%;
+        min-height: 52px;
+        border: 0;
+        border-radius: 17px;
+        background: var(--blue-fill);
+        color: #fff;
+        font-weight: 950;
+      }
+
+      .button.secondary {
+        border: 1.5px solid var(--border-strong);
+        background: #143556;
+        color: var(--blue);
+      }
+
+      .field {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 12px;
+      }
+
+      input {
+        min-height: 46px;
+        border: 1.5px solid var(--border);
+        border-radius: 14px;
+        background: #0e1a2b;
+        color: var(--text);
+        padding: 0 12px;
+        font-weight: 800;
+      }
+
+      input::placeholder {
+        color: #92a3b8;
+      }
+
+      .result {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 16px;
+        background: var(--raised);
+        color: var(--blue);
+      }
+
+      .result b {
+        font-size: 24px;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .kpi {
+        min-height: 86px;
+        text-align: center;
+      }
+
+      .kpi span,
+      .status {
+        display: block;
+        color: var(--secondary);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .kpi b {
+        display: block;
+        margin-top: 7px;
+        color: var(--blue);
+        font-size: 24px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+
+      th,
+      td {
+        padding: 10px 6px;
+        border-bottom: 1px solid var(--border);
+        text-align: left;
+      }
+
+      .ok {
+        color: var(--success);
+      }
+
+      .warn {
+        color: var(--warning);
+      }
+
+      .danger {
+        color: var(--danger);
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .screens {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <span class="eyebrow">Mantos Group · Modo oscuro</span>
+          <h1>Contraste reforzado para lectura operacional</h1>
+        </div>
+        <p>
+          Vista de referencia del modo oscuro corregido: fondo azul-negro, tarjetas elevadas, texto claro, acciones azules y estados semánticos visibles.
+        </p>
+      </section>
+
+      <section class="screens">
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Mantos App</b>
+                  <span>Operador · Terreno</span>
+                </div>
+              </div>
+              <span class="pill">Oscuro</span>
+            </div>
+            <section class="summary">
+              <span>Operación activa</span>
+              <strong>Sistema en línea</strong>
+              <p>2 pendientes por sincronizar</p>
+            </section>
+            <div class="card module">
+              <span class="icon">TR</span>
+              <div><strong>Medición Tasa de Riego</strong><small>Registro, historial y exportación.</small></div>
+              <b>›</b>
+            </div>
+            <div class="card module">
+              <span class="icon dark">IZ</span>
+              <div><strong>Izajes</strong><small>Fórmulas y documentación previa.</small></div>
+              <b>›</b>
+            </div>
+            <button class="button">Sincronizar datos pendientes</button>
+          </div>
+        </article>
+
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Tasa de Riego</b>
+                  <span>Formulario</span>
+                </div>
+              </div>
+              <span class="pill">36 s</span>
+            </div>
+            <div class="card">
+              <div class="field">
+                <label>Pila</label>
+                <input value="12" aria-label="Pila" />
+              </div>
+              <div class="field">
+                <label>Fase</label>
+                <input value="A1" aria-label="Fase" />
+              </div>
+              <div class="result"><span>Tasa calculada</span><b>4.40 L/h</b></div>
+            </div>
+            <div class="card">
+              <strong>Estados visibles</strong>
+              <small><span class="ok">Sincronizado</span> · <span class="warn">Pendiente</span> · <span class="danger">Requiere revisión</span></small>
+            </div>
+            <button class="button secondary">Guardar localmente</button>
+          </div>
+        </article>
+
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Panel administrador</b>
+                  <span>Control operativo</span>
+                </div>
+              </div>
+              <span class="pill">Admin</span>
+            </div>
+            <div class="kpis">
+              <div class="card kpi"><span>Mediciones</span><b>108</b></div>
+              <div class="card kpi"><span>Promedio</span><b>16.8</b></div>
+              <div class="card kpi"><span>Docs</span><b>42</b></div>
+            </div>
+            <div class="card">
+              <strong>Historial</strong>
+              <table>
+                <thead>
+                  <tr><th>Operador</th><th>Ubicación</th><th>Tasa</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Ian</td><td>Pila 12</td><td class="ok">18.4</td></tr>
+                  <tr><td>Turno A</td><td>Pila 13</td><td class="warn">0.0</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <button class="button">Compartir reporte Excel</button>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

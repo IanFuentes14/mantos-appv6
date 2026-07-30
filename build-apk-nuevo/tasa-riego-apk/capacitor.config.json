@@ -1,0 +1,11 @@
+{
+  "appId": "cl.tasariego.app",
+  "appName": "Mantos Group",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

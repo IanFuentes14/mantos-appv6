@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App - Tablas de Carga</title>
+    <style>
+      :root {
+        --bg: #9fb2ca;
+        --bg-card: #eef5fc;
+        --surface-strong: #dce9f5;
+        --border: #557092;
+        --blue-dark: #061744;
+        --blue-mid: #0647a5;
+        --text-primary: #031235;
+        --text-secondary: #173461;
+        --radius: 8px;
+        --shadow: 0 10px 24px rgba(6, 23, 68, 0.18);
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: var(--bg);
+        color: var(--text-primary);
+      }
+
+      main {
+        width: min(100%, 480px);
+        min-height: 100vh;
+        margin: 0 auto;
+        padding: 16px 14px 28px;
+        background: var(--bg);
+      }
+
+      .card {
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg-card);
+        box-shadow: var(--shadow);
+        padding: 18px;
+      }
+
+      .card-title {
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      p {
+        color: var(--text-secondary);
+        line-height: 1.45;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin: 16px 0;
+      }
+
+      .form-group {
+        display: grid;
+        gap: 6px;
+      }
+
+      label {
+        color: var(--text-secondary);
+        font-size: 11px;
+        font-weight: 950;
+        text-transform: uppercase;
+      }
+
+      select {
+        min-height: 48px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        color: var(--text-primary);
+        padding: 0 12px;
+        font: inherit;
+        font-weight: 850;
+      }
+
+      .cond-gallery {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .cond-thumb {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--bg);
+      }
+
+      .cond-thumb img {
+        width: 100%;
+        height: 128px;
+        object-fit: cover;
+      }
+
+      .image-preview-button {
+        display: block;
+        width: 100%;
+        min-height: 48px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: zoom-in;
+      }
+
+      .cond-thumb-info {
+        padding: 10px;
+      }
+
+      .cond-thumb-info strong,
+      .cond-thumb-info span {
+        display: block;
+      }
+
+      .cond-thumb-info strong {
+        color: var(--text-primary);
+      }
+
+      .cond-thumb-info span {
+        margin-top: 4px;
+        color: var(--text-secondary);
+        font-size: 12px;
+      }
+
+      .cond-empty-hint {
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--surface-strong);
+        color: var(--text-secondary);
+        padding: 14px;
+      }
+
+      .image-modal-overlay {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.82);
+        padding: 16px;
+      }
+
+      .image-modal-overlay.open {
+        display: flex;
+      }
+
+      .image-modal {
+        width: min(100%, 760px);
+        border-radius: var(--radius);
+        background: #101c2d;
+        padding: 12px;
+      }
+
+      .image-modal img {
+        display: block;
+        width: 100%;
+        max-height: 72vh;
+        object-fit: contain;
+      }
+
+      .image-modal button {
+        min-height: 48px;
+        border: 0;
+        border-radius: var(--radius);
+        background: var(--blue-mid);
+        color: #fff;
+        padding: 0 16px;
+        font-weight: 950;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <div class="card-title">Tablas de carga</div>
+        <p>Seleccione la serie principal de pluma y el submodelo para consultar la tabla asociada.</p>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="series">Serie principal de pluma</label>
+            <select id="series">
+              <option value="">Seleccione serie</option>
+              <option value="F660">F660</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="submodel">Submodelo</label>
+            <select id="submodel" disabled>
+              <option value="">Seleccione submodelo</option>
+            </select>
+          </div>
+        </div>
+        <div id="viewer" class="cond-empty-hint">Seleccione una serie y un submodelo para visualizar la tabla de carga.</div>
+      </section>
+    </main>
+
+    <div id="modal" class="image-modal-overlay" role="dialog" aria-modal="true">
+      <div class="image-modal">
+        <button type="button" onclick="closeModal()">Cerrar</button>
+        <img id="modal-image" src="" alt="" />
+      </div>
+    </div>
+
+    <script>
+      const loadTables = {
+        F660: {
+          label: "F660",
+          submodels: {
+            "F660RA.2.25": { label: "F660RA.2.25", image: "Captura de pantalla 2026-07-23 153510.png" },
+            "F660RA.2.26": { label: "F660RA.2.26", image: "Captura de pantalla 2026-07-23 153610.png" },
+            "F660RA.2.27": { label: "F660RA.2.27", image: "Captura de pantalla 2026-07-23 153703.png" },
+            "F660RA.2.28": { label: "F660RA.2.28", image: "Captura de pantalla 2026-07-23 153731.png" },
+          },
+        },
+      };
+
+      const series = document.getElementById("series");
+      const submodel = document.getElementById("submodel");
+      const viewer = document.getElementById("viewer");
+      const modal = document.getElementById("modal");
+      const modalImage = document.getElementById("modal-image");
+
+      series.addEventListener("change", () => {
+        submodel.innerHTML = '<option value="">Seleccione submodelo</option>';
+        submodel.disabled = !series.value;
+        viewer.className = "cond-empty-hint";
+        viewer.textContent = "Seleccione una serie y un submodelo para visualizar la tabla de carga.";
+        if (!series.value) return;
+        Object.keys(loadTables[series.value].submodels).forEach((key) => {
+          const option = document.createElement("option");
+          option.value = key;
+          option.textContent = key;
+          submodel.append(option);
+        });
+      });
+
+      submodel.addEventListener("change", () => {
+        const item = loadTables[series.value]?.submodels[submodel.value];
+        if (!item) return;
+        viewer.className = "cond-gallery";
+        viewer.innerHTML = `
+          <article class="cond-thumb">
+            <button class="image-preview-button" type="button" onclick="openModal('${item.image}', '${item.label}')">
+              <img src="${item.image}" alt="Tabla de carga ${item.label}" />
+            </button>
+            <div class="cond-thumb-info">
+              <strong>${item.label}</strong>
+              <span>Categoria ${loadTables[series.value].label}</span>
+            </div>
+          </article>
+        `;
+      });
+
+      function openModal(src, title) {
+        modalImage.src = src;
+        modalImage.alt = title;
+        modal.classList.add("open");
+      }
+
+      function closeModal() {
+        modal.classList.remove("open");
+      }
+    </script>
+  </body>
+</html>

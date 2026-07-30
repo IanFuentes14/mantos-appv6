@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App v2 Preview</title>
+    <style>
+      :root {
+        --blue-dark: #08256f;
+        --blue-mid: #0057e7;
+        --blue-light: #2f7cff;
+        --blue-pale: #d7e7fb;
+        --text-primary: #061744;
+        --text-secondary: #1d356f;
+        --text-muted: #526b99;
+        --bg: #cfdbea;
+        --card: #e8f1fa;
+        --border: #8fa9c9;
+        --shadow: 0 14px 34px rgba(8, 37, 111, 0.2);
+        --success: #278d5c;
+        --danger: #c0392b;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 8% 8%, rgba(0, 87, 231, 0.12), transparent 26%),
+          radial-gradient(circle at 92% 14%, rgba(47, 124, 255, 0.16), transparent 28%),
+          linear-gradient(115deg, rgba(221, 234, 248, 0.88), rgba(198, 212, 229, 0.96)),
+          var(--bg);
+        color: var(--text-primary);
+      }
+
+      .page {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+        padding: 36px 24px 52px;
+      }
+
+      .hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 30px;
+      }
+
+      .hero span {
+        display: inline-flex;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--blue-pale);
+        color: var(--blue-mid);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .hero h1 {
+        max-width: 640px;
+        margin: 14px 0 0;
+        color: var(--text-primary);
+        font-size: clamp(30px, 5vw, 54px);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+      }
+
+      .hero p {
+        max-width: 360px;
+        margin: 0;
+        color: var(--text-muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+        align-items: start;
+      }
+
+      .phone {
+        min-height: 680px;
+        padding: 20px;
+        border: 1.5px solid var(--border);
+        border-radius: 34px;
+        background:
+          radial-gradient(circle at 82% 8%, rgba(0, 87, 231, 0.1), transparent 24%),
+          linear-gradient(180deg, #dce8f5, #cbd8e8);
+        box-shadow: var(--shadow);
+      }
+
+      .phone-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--blue-dark);
+        font-weight: 900;
+      }
+
+      .brand img {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        object-fit: cover;
+        box-shadow: 0 10px 22px rgba(11, 92, 255, 0.18);
+      }
+
+      .pill {
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: var(--blue-pale);
+        color: var(--blue-mid);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .welcome {
+        margin: 38px 0 34px;
+        text-align: center;
+      }
+
+      .welcome img {
+        width: 128px;
+        height: 128px;
+        border-radius: 30px;
+        object-fit: cover;
+        box-shadow: var(--shadow);
+      }
+
+      .welcome h2 {
+        margin: 24px 0 8px;
+        color: var(--text-primary);
+        font-size: 28px;
+        line-height: 1.05;
+      }
+
+      .welcome p,
+      .muted {
+        color: var(--text-muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 15px 16px;
+        border: 0;
+        border-radius: 17px;
+        background: var(--blue-mid);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 900;
+        box-shadow: 0 16px 30px rgba(11, 92, 255, 0.25);
+      }
+
+      .btn.secondary {
+        margin-top: 12px;
+        border: 1px solid var(--border);
+        background: var(--blue-pale);
+        color: var(--blue-dark);
+        box-shadow: none;
+      }
+
+      .section-title {
+        margin: 18px 0 16px;
+      }
+
+      .section-title span {
+        color: var(--blue-mid);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .section-title h2 {
+        margin: 5px 0 0;
+        color: var(--text-primary);
+        font-size: 24px;
+        line-height: 1.05;
+      }
+
+      .card {
+        padding: 16px;
+        border: 1.5px solid var(--border);
+        border-radius: 24px;
+        margin-bottom: 14px;
+        background: var(--card);
+        box-shadow: 0 14px 32px rgba(16, 42, 122, 0.09);
+      }
+
+      .menu-card {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .icon {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        place-items: center;
+        border-radius: 17px;
+        background: linear-gradient(135deg, var(--blue-mid), var(--blue-light));
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .menu-card strong,
+      .formula-card strong {
+        display: block;
+        color: var(--text-primary);
+        font-size: 14px;
+      }
+
+      .menu-card small,
+      .formula-card small {
+        display: block;
+        margin-top: 3px;
+        color: var(--text-muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 15px;
+      }
+
+      .tabs button {
+        min-height: 48px;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: var(--card);
+        color: var(--text-secondary);
+        font-weight: 900;
+      }
+
+      .tabs button.active {
+        border-color: var(--blue-mid);
+        background: var(--blue-mid);
+        color: #fff;
+        box-shadow: 0 14px 28px rgba(11, 92, 255, 0.22);
+      }
+
+      .formula-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .result {
+        padding: 13px;
+        border-radius: 16px;
+        background: rgba(39, 141, 92, 0.09);
+        color: var(--success);
+      }
+
+      .result.danger {
+        background: rgba(192, 57, 43, 0.09);
+        color: var(--danger);
+      }
+
+      .result span {
+        display: block;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .result b {
+        display: block;
+        margin-top: 5px;
+        font-size: 20px;
+      }
+
+      .field {
+        height: 44px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: #f2f7fd;
+      }
+
+      .check-row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: center;
+        padding: 12px;
+        border-radius: 16px;
+        background: var(--blue-pale);
+        color: var(--text-secondary);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .dot {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--blue-mid);
+        box-shadow: inset 0 0 0 5px #fff;
+      }
+
+      @media (max-width: 920px) {
+        .screens {
+          grid-template-columns: 1fr;
+        }
+
+        .phone {
+          min-height: auto;
+        }
+
+        .hero {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <span>Mantos Group</span>
+          <h1>Nueva estética empresarial para la app operacional</h1>
+        </div>
+        <p>Vista rápida del estilo v2: superficies limpias, azul institucional, tarjetas amplias y controles simples para uso en terreno.</p>
+      </section>
+
+      <section class="screens" aria-label="Previsualización de pantallas">
+        <article class="phone">
+          <div class="phone-header">
+            <div class="brand">
+              <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+              Mantos
+            </div>
+            <span class="pill">Acceso</span>
+          </div>
+          <div class="welcome">
+            <img src="public/mantos_group_logo.jpg" alt="" />
+            <h2>Bienvenido</h2>
+            <p>Acceso claro para administrador u operador, manteniendo soporte offline para terreno.</p>
+          </div>
+          <button class="btn">Acceder como administrador</button>
+          <button class="btn secondary">Acceder como usuario</button>
+        </article>
+
+        <article class="phone">
+          <div class="phone-header">
+            <div class="brand">
+              <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+              Menú principal
+            </div>
+            <span class="pill">Online</span>
+          </div>
+          <div class="section-title">
+            <span>Operación</span>
+            <h2>Seleccione módulo</h2>
+          </div>
+          <div class="card menu-card">
+            <div class="icon">TR</div>
+            <div>
+              <strong>Medición Tasa de Riego</strong>
+              <small>Registro, historial y exportación de mediciones.</small>
+            </div>
+            <b>›</b>
+          </div>
+          <div class="card menu-card">
+            <div class="icon">IZ</div>
+            <div>
+              <strong>Izajes</strong>
+              <small>Fórmulas, cálculo de peso y documentación previa.</small>
+            </div>
+            <b>›</b>
+          </div>
+          <div class="card menu-card">
+            <div class="icon">DC</div>
+            <div>
+              <strong>Conducción</strong>
+              <small>Carga y gestión de documentación operacional.</small>
+            </div>
+            <b>›</b>
+          </div>
+          <button class="btn">Sincronizar datos pendientes</button>
+        </article>
+
+        <article class="phone">
+          <div class="phone-header">
+            <div class="brand">
+              <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+              Izajes
+            </div>
+            <span class="pill">v2</span>
+          </div>
+          <div class="tabs">
+            <button class="active">Fórmulas</button>
+            <button>Cálculo de peso</button>
+          </div>
+          <div class="card formula-card">
+            <strong>Capacidad de trabajo</strong>
+            <small>Peso de carga contra capacidad de grúa.</small>
+            <div class="formula-grid">
+              <div class="field"></div>
+              <div class="field"></div>
+            </div>
+            <div class="result">
+              <span>Resultado</span>
+              <b>68.00%</b>
+            </div>
+          </div>
+          <div class="card formula-card">
+            <strong>Ángulo y tensión de eslingas</strong>
+            <small>Ángulo de trabajo y tensión por eslinga.</small>
+            <div class="formula-grid">
+              <div class="result">
+                <span>Ángulo</span>
+                <b>53.13°</b>
+              </div>
+              <div class="result">
+                <span>Tensión</span>
+                <b>375.00</b>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <strong>Documentación previa</strong>
+            <small>Checklist simple y verificable antes de la maniobra.</small>
+            <div class="check-row" style="margin-top:12px;">
+              <span class="dot"></span>
+              Procedimiento de trabajo
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

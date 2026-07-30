@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import imageCompression from 'browser-image-compression';
 import { glossaryTerms } from './data/glossary';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
@@ -13,9 +14,16 @@ import {
 
 const DOCUMENT_BUCKET = 'conduction-documents';
 const DELETE_FUNCTION = 'delete-local-record';
-const IMAGE_MAX_EDGE = 1600;
-const IMAGE_QUALITY = 0.72;
+const IMAGE_MAX_EDGE = 1400;
+const IMAGE_QUALITY = 0.7;
+const IMAGE_TARGET_BYTES = 500 * 1024;
+const IMAGE_TARGET_MB = 0.48;
 const COMPRESSED_IMAGE_TYPE = 'image/jpeg';
+const SYNC_TIMEOUT_MS = 20000;
+const f660Ra225Image = new URL('../Captura de pantalla 2026-07-23 153510.png', import.meta.url).href;
+const f660Ra226Image = new URL('../Captura de pantalla 2026-07-23 153610.png', import.meta.url).href;
+const f660Ra227Image = new URL('../Captura de pantalla 2026-07-23 153703.png', import.meta.url).href;
+const f660Ra228Image = new URL('../Captura de pantalla 2026-07-23 153731.png', import.meta.url).href;
 const LIFTING_DOCUMENTATION_ITEMS = [
   'Procedimiento de trabajo',
   'Difusion de procedimiento',
@@ -41,6 +49,110 @@ const LIFTING_MATERIALS = [
   { name: 'Acero inox', density: 8000 },
   { name: 'Hierro', density: 7860 },
   { name: 'Plomo', density: 11340 },
+];
+const LOAD_TABLE_SERIES = {
+  F660: {
+    label: 'F660',
+    submodels: {
+      'F660RA.2.25': { label: 'F660RA.2.25', image: f660Ra225Image },
+      'F660RA.2.26': { label: 'F660RA.2.26', image: f660Ra226Image },
+      'F660RA.2.27': { label: 'F660RA.2.27', image: f660Ra227Image },
+      'F660RA.2.28': { label: 'F660RA.2.28', image: f660Ra228Image },
+    },
+  },
+};
+const LIFTING_SECTIONS = [
+  {
+    id: 'formulas',
+    number: '01',
+    title: 'Fórmulas',
+    description: 'Cálculos operacionales',
+  },
+  {
+    id: 'weight',
+    number: '02',
+    title: 'Cálculo de peso',
+    description: 'Pesos por geometría',
+  },
+  {
+    id: 'loadTables',
+    number: '03',
+    title: 'Tablas de carga',
+    description: 'Series y submodelos',
+  },
+  {
+    id: 'documentation',
+    number: '04',
+    title: 'Documentación',
+    description: 'Control previo',
+  },
+];
+const LIFTING_FORMULA_EXPLANATIONS = {
+  'boom-geometry': {
+    title: 'Ángulo y altura de pluma',
+    purpose: 'Determina la inclinación de la pluma y la altura teórica de su punta a partir de la longitud y el radio de operación.',
+    steps: [
+      'Verifique que la longitud de la pluma (L) sea mayor que el radio de operación (R).',
+      'Calcule el ángulo aplicando: ángulo = acos(R / L).',
+      'Calcule la altura con Pitágoras: altura = √(L² - R²).',
+    ],
+    result: 'Entrega el ángulo de la pluma en grados y la altura de su punta en metros.',
+    warning: 'La altura obtenida es geométrica y no considera la altura de montaje, deformaciones, accesorios ni condiciones particulares del equipo.',
+  },
+  'work-capacity': {
+    title: 'Capacidad de trabajo',
+    purpose: 'Calcula qué porcentaje de la capacidad declarada de la grúa representa el peso de la carga.',
+    steps: [
+      'Utilice el peso de la carga y la capacidad de la grúa en la misma unidad.',
+      'Divida el peso de la carga por la capacidad de la grúa.',
+      'Multiplique el resultado por 100: utilización = (peso / capacidad) × 100.',
+    ],
+    result: 'Entrega el porcentaje de utilización. La aplicación destaca en rojo los valores iguales o superiores al 75%.',
+    warning: 'La capacidad ingresada debe corresponder al radio, longitud de pluma y configuración real indicados en la tabla de carga del fabricante.',
+  },
+  'sling-geometry': {
+    title: 'Ángulo de trabajo y tensión de eslingas',
+    purpose: 'Estima el ángulo respecto de la horizontal y la tensión que recibe cada eslinga cuando la carga se distribuye uniformemente.',
+    steps: [
+      'Verifique que la longitud de la eslinga (L) sea mayor o igual que la altura entre el gancho y la carga (H).',
+      'Calcule el ángulo aplicando: ángulo = asin(H / L).',
+      'Calcule la tensión por eslinga: tensión = (peso / número de eslingas) × (L / H).',
+    ],
+    result: 'Entrega el ángulo en grados y la tensión teórica soportada por cada eslinga, en la misma unidad utilizada para el peso.',
+    warning: 'El cálculo supone reparto uniforme. El centro de gravedad, la geometría real y la cantidad efectiva de ramales portantes pueden aumentar la tensión.',
+  },
+  'gravity-center': {
+    title: 'Centro de gravedad',
+    purpose: 'Permite encontrar el punto donde se concentra el peso de una carga para ubicar correctamente el aparejo y el gancho.',
+    steps: [
+      'Separe la carga en piezas e identifique el peso de cada una.',
+      'Defina un punto cero desde donde medirá todas las distancias.',
+      'Mida la distancia desde el punto cero hasta el centro de cada pieza. Use siempre la misma unidad.',
+      'Calcule el momento de cada pieza: momento = peso × distancia.',
+      'Sume los momentos y divida el resultado por el peso total: CG = suma de momentos / peso total.',
+      'Ubique el gancho sobre el centro de gravedad y realice una prueba de levante a pocos centímetros para verificar el equilibrio.',
+    ],
+    result: 'La aplicación entrega el peso total y la distancia del centro de gravedad respecto del punto cero.',
+    warning: 'Este cálculo es una referencia. Si la carga se inclina durante la prueba, bájela y corrija el aparejo. No realice ajustes con la carga suspendida.',
+  },
+};
+const SURVEY_LINKS = [
+  {
+    title: 'Estado de salud',
+    url: 'https://encuestasalud.bubbleapps.io/version-test?debug_mode=true',
+  },
+  {
+    title: 'Estado de elementos de protección personal',
+    url: 'https://encuestasalud.bubbleapps.io/version-test/epp?debug_mode=true',
+  },
+  {
+    title: 'Estado de salud para conductores',
+    url: 'https://encuestasalud.bubbleapps.io/version-test/fatiga_somnolencia_/Lorem%20ipsum',
+  },
+  {
+    title: 'Estado de GPS',
+    url: 'https://certificados.wisetrack.cl/LomasBayas/Resultado.aspx',
+  },
 ];
 
 const initialMeasurement = {
@@ -90,6 +202,61 @@ function loadImageFile(file) {
     };
     image.src = url;
   });
+}
+
+async function canvasCompressImageFile(file, maxEdge = IMAGE_MAX_EDGE, quality = IMAGE_QUALITY) {
+  try {
+    let blob = await imageCompression(file, {
+      alwaysKeepResolution: false,
+      fileType: COMPRESSED_IMAGE_TYPE,
+      initialQuality: IMAGE_QUALITY,
+      maxSizeMB: IMAGE_TARGET_MB,
+      maxWidthOrHeight: IMAGE_MAX_EDGE,
+      useWebWorker: true,
+    });
+
+    if (blob.size > IMAGE_TARGET_BYTES) {
+      const steps = [
+        { maxEdge: 1280, quality: 0.66 },
+        { maxEdge: 1120, quality: 0.62 },
+        { maxEdge: 960, quality: 0.58 },
+      ];
+      for (const step of steps) {
+        blob = await canvasCompressImageFile(blob, step.maxEdge, step.quality);
+        if (blob.size <= IMAGE_TARGET_BYTES) break;
+      }
+    }
+
+    const cleanName = (file.name || 'documento').replace(/\.[^.]+$/, '');
+    return {
+      dataUrl: await blobToDataUrl(blob),
+      fileName: `${cleanName}.jpg`,
+      mimeType: COMPRESSED_IMAGE_TYPE,
+      compressedSize: blob.size,
+      originalSize: file.size,
+    };
+  } catch (_error) {
+    // Continue with the local canvas fallback below.
+  }
+
+  const image = await loadImageFile(file);
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const scale = Math.min(1, maxEdge / Math.max(width, height));
+  const nextWidth = Math.max(1, Math.round(width * scale));
+  const nextHeight = Math.max(1, Math.round(height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = nextWidth;
+  canvas.height = nextHeight;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('No se pudo preparar la compresion de imagen.');
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, nextWidth, nextHeight);
+  context.drawImage(image, 0, 0, nextWidth, nextHeight);
+
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, COMPRESSED_IMAGE_TYPE, quality));
+  if (!blob) throw new Error(`No se pudo comprimir ${file.name || 'la imagen'}.`);
+  return blob;
 }
 
 async function compressImageFile(file) {
@@ -485,8 +652,52 @@ async function deleteRemoteRecord(kind, record) {
       deleteToken: record.deleteToken,
     },
   });
-  if (error) throw new Error(error.message || 'No se pudo eliminar el registro en Supabase.');
+  if (error) throw new Error(await getFunctionErrorMessage(error, 'No se pudo eliminar el registro en Supabase.'));
   if (!data?.ok) throw new Error(data?.error || 'No se pudo eliminar el registro en Supabase.');
+}
+
+async function getFunctionErrorMessage(error, fallback = 'No se pudo ejecutar la funcion de Supabase.') {
+  const response = error?.context;
+  if (response?.clone) {
+    try {
+      const body = await response.clone().json();
+      return body?.error || body?.message || error?.message || fallback;
+    } catch (_jsonError) {
+      try {
+        const text = await response.clone().text();
+        if (text) return text;
+      } catch (_textError) {
+        // Keep the original Supabase message below.
+      }
+    }
+  }
+  return error?.message || fallback;
+}
+
+async function fetchAllAdminMeasurementDeleteRecords() {
+  const rows = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const to = from + pageSize - 1;
+    const { data, error } = await supabase
+      .from('irrigation_measurements')
+      .select('id, delete_token')
+      .range(from, to);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
+async function deleteAdminMeasurementsDirectly() {
+  const { data, error } = await supabase
+    .from('irrigation_measurements')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000')
+    .select('id');
+  if (error) throw error;
+  return data || [];
 }
 
 function calculateMeasurement(values) {
@@ -519,6 +730,53 @@ function formatWeight(value) {
   if (!Number.isFinite(value) || value <= 0) return 'Ingrese valores';
   if (value >= 1000) return `${(value / 1000).toFixed(2)} t`;
   return `${value.toFixed(2)} kg`;
+}
+
+function openExternalUrl(url) {
+  const opened = window.open(url, '_blank', 'noopener,noreferrer');
+  if (!opened) window.location.href = url;
+}
+
+function createSyncError(error, fallback = 'No se pudo sincronizar el registro.') {
+  const rawMessage = error?.message || String(error || fallback);
+  const lowerMessage = rawMessage.toLowerCase();
+  const isNetworkError =
+    error?.name === 'AbortError' ||
+    lowerMessage.includes('timeout') ||
+    lowerMessage.includes('network') ||
+    lowerMessage.includes('failed to fetch') ||
+    lowerMessage.includes('load failed') ||
+    lowerMessage.includes('socket') ||
+    lowerMessage.includes('fetch');
+
+  return {
+    message: error?.name === 'AbortError' ? 'Tiempo de espera agotado. Revise la conexión e intente nuevamente.' : rawMessage,
+    kind: isNetworkError ? 'error_red' : 'error',
+  };
+}
+
+function assertSupabaseSuccess(response, fallback = 'Supabase no confirmó la operación.') {
+  if (response?.error) throw response.error;
+  if (typeof response?.status === 'number' && (response.status < 200 || response.status >= 300)) {
+    throw new Error(`${fallback} Estado HTTP: ${response.status}`);
+  }
+  return response;
+}
+
+async function withTimeout(operation, timeoutMs = SYNC_TIMEOUT_MS) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      const error = new Error('Timeout de sincronización.');
+      error.name = 'AbortError';
+      reject(error);
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 function calculateSlingGeometry(peso, n, l, h) {
@@ -571,6 +829,7 @@ function App() {
   const [adminDocuments, setAdminDocuments] = useState([]);
   const [message, setMessage] = useState('');
   const [syncing, setSyncing] = useState(false);
+  const [syncUiStatus, setSyncUiStatus] = useState('idle');
   const [theme, setTheme] = useState(() => localStorage.getItem('mantos_theme') || 'light');
 
   const canUseSupabase = isSupabaseConfigured && supabase;
@@ -610,8 +869,53 @@ function App() {
   }, [session, screen]);
 
   useEffect(() => {
-    if (isOnline && canUseSupabase && pendingCount > 0 && !syncing) syncPending();
-  }, [isOnline]);
+    if (!isOnline || !canUseSupabase || pendingCount === 0 || syncing) return undefined;
+    const retryId = window.setTimeout(() => {
+      syncPending({ source: 'auto-retry' });
+    }, 900);
+    return () => window.clearTimeout(retryId);
+  }, [isOnline, canUseSupabase, pendingCount, syncing]);
+
+  useEffect(() => {
+    if (!canUseSupabase || !isOnline || accessRole !== 'user') return undefined;
+    let cancelled = false;
+    let channel = null;
+
+    const refresh = () => {
+      if (!cancelled) reconcileOperatorDocuments(getQueuedDocuments(), { silent: true });
+    };
+
+    async function subscribeToDocumentChanges() {
+      try {
+        await ensureOperatorAuth();
+        if (cancelled) return;
+        channel = supabase
+          .channel('operator-conduction-documents-cache')
+          .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'conduction_documents' },
+            refresh,
+          )
+          .subscribe();
+      } catch (_error) {
+        refresh();
+      }
+    }
+
+    subscribeToDocumentChanges();
+    refresh();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [canUseSupabase, isOnline, accessRole]);
+
+  useEffect(() => {
+    if (screen !== 'conduction' || accessRole !== 'user' || !isOnline || !canUseSupabase) return undefined;
+    reconcileOperatorDocuments(documents, { silent: true });
+    return undefined;
+  }, [screen, accessRole, isOnline, canUseSupabase, documents]);
 
   async function ensureOperatorAuth() {
     if (!canUseSupabase || !navigator.onLine) return null;
@@ -620,33 +924,97 @@ function App() {
     if (current.data.session && accessRole !== 'admin') await supabase.auth.signOut();
 
     const { data, error } = await supabase.auth.signInAnonymously();
-    if (error) {
-      return null;
-    }
+    if (error) throw error;
     return data.session;
   }
 
+  async function reconcileOperatorDocuments(sourceDocuments = documents, options = {}) {
+    const { silent = false } = options;
+    if (!canUseSupabase || accessRole !== 'user' || !navigator.onLine) return sourceDocuments;
+
+    const syncedDocuments = sourceDocuments.filter((doc) => doc.syncStatus === 'synced' && doc.id);
+    if (!syncedDocuments.length) return sourceDocuments;
+
+    try {
+      await ensureOperatorAuth();
+      const ids = [...new Set(syncedDocuments.map((doc) => doc.id))];
+      const response = await withTimeout(
+        supabase
+          .from('conduction_documents')
+          .select('id, file_path')
+          .in('id', ids)
+          .not('file_path', 'is', null),
+      );
+      assertSupabaseSuccess(response, 'No se pudo validar la documentacion activa.');
+
+      const activeIds = new Set((response.data || []).map((doc) => doc.id));
+      const nextDocuments = sourceDocuments.filter((doc) => doc.syncStatus !== 'synced' || activeIds.has(doc.id));
+
+      if (nextDocuments.length !== sourceDocuments.length) {
+        setDocuments(nextDocuments);
+        saveQueuedDocuments(nextDocuments);
+        if (!silent) setMessage('Documentacion local actualizada con los cambios del administrador.');
+      }
+
+      return nextDocuments;
+    } catch (error) {
+      if (!silent) {
+        const syncError = createSyncError(error, 'No se pudo actualizar la documentacion desde Supabase.');
+        setMessage(syncError.message);
+      }
+      return sourceDocuments;
+    }
+  }
+
   async function syncPending() {
+    if (syncing) return { status: 'sincronizando' };
     if (!canUseSupabase) {
+      setSyncUiStatus('error_red');
       setMessage('Configure Supabase para sincronizar datos.');
-      return;
+      return { status: 'error_red', error: 'Supabase no configurado.' };
     }
     if (!navigator.onLine) {
+      setSyncUiStatus('error_red');
       setMessage('Sin conexión. Los registros permanecerán en el dispositivo.');
-      return;
+      return { status: 'error_red', error: 'Sin conexión.' };
     }
 
     setSyncing(true);
+    setSyncUiStatus('sincronizando');
+    setMessage('Sincronizando datos pendientes...');
+
+    let hasNetworkError = false;
+    let failedCount = 0;
+    let syncedCount = 0;
+
     try {
-      if (accessRole !== 'admin') await ensureOperatorAuth();
+      const sessionResponse = await withTimeout(
+        accessRole === 'admin' ? supabase.auth.getSession() : ensureOperatorAuth(),
+      );
+      const activeSession = accessRole === 'admin' ? sessionResponse.data.session : sessionResponse;
+      if (!activeSession) throw new Error('No se pudo habilitar la sesión técnica. Active Anonymous Sign-ins en Supabase Auth.');
+
       const nextMeasurements = [];
       for (const record of measurements) {
         if (record.syncStatus === 'synced') {
           nextMeasurements.push(record);
           continue;
         }
-        const { error } = await supabase.from('irrigation_measurements').insert(buildMeasurementPayload(record));
-        nextMeasurements.push(error ? { ...record, syncStatus: 'pending', syncError: error.message } : { ...record, syncStatus: 'synced', syncError: '' });
+        try {
+          const response = await withTimeout(
+            supabase
+              .from('irrigation_measurements')
+              .upsert(buildMeasurementPayload(record), { onConflict: 'id' }),
+          );
+          assertSupabaseSuccess(response, 'No se confirmó la sincronización de la medición.');
+          syncedCount += 1;
+          nextMeasurements.push({ ...record, syncStatus: 'synced', syncError: '', isModified: Boolean(record.isModified) });
+        } catch (error) {
+          const syncError = createSyncError(error);
+          if (syncError.kind === 'error_red') hasNetworkError = true;
+          failedCount += 1;
+          nextMeasurements.push({ ...record, syncStatus: 'pending', syncError: syncError.message });
+        }
       }
 
       const nextDocuments = [];
@@ -655,33 +1023,62 @@ function App() {
           nextDocuments.push(record);
           continue;
         }
-        const blob = dataUrlToBlob(record.dataUrl);
         const storagePath = getDocumentStoragePath(record);
-        const upload = await supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
-          contentType: record.mimeType,
-          upsert: false,
-        });
-        if (upload.error) {
-          nextDocuments.push({ ...record, syncStatus: 'pending', syncError: upload.error.message });
-          continue;
+        try {
+          const blob = dataUrlToBlob(record.dataUrl);
+          const upload = await withTimeout(
+            supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
+              contentType: record.mimeType,
+              upsert: true,
+            }),
+          );
+          assertSupabaseSuccess(upload, 'No se confirmó la carga del documento.');
+
+          const response = await withTimeout(
+            supabase.from('conduction_documents').upsert({
+              id: record.id,
+              driver_name: record.driverName,
+              operator_name: record.operatorName,
+              file_name: record.fileName,
+              file_path: storagePath,
+              uploaded_at: record.createdAt,
+              delete_token: record.deleteToken || null,
+            }, { onConflict: 'id' }),
+          );
+          assertSupabaseSuccess(response, 'No se confirmó el registro del documento.');
+          syncedCount += 1;
+          nextDocuments.push({ ...record, filePath: storagePath, syncStatus: 'synced', syncError: '' });
+        } catch (error) {
+          const syncError = createSyncError(error);
+          if (syncError.kind === 'error_red') hasNetworkError = true;
+          failedCount += 1;
+          nextDocuments.push({ ...record, syncStatus: 'pending', syncError: syncError.message });
         }
-        const insert = await supabase.from('conduction_documents').insert({
-          id: record.id,
-          driver_name: record.driverName,
-          operator_name: record.operatorName,
-          file_name: record.fileName,
-          file_path: storagePath,
-          uploaded_at: record.createdAt,
-          delete_token: record.deleteToken || null,
-        });
-        nextDocuments.push(insert.error ? { ...record, syncStatus: 'pending', syncError: insert.error.message } : { ...record, filePath: storagePath, syncStatus: 'synced', syncError: '' });
       }
 
       setMeasurements(nextMeasurements);
       setDocuments(nextDocuments);
       saveQueuedMeasurements(nextMeasurements);
       saveQueuedDocuments(nextDocuments);
-      setMessage('Sincronización finalizada.');
+      await reconcileOperatorDocuments(nextDocuments, { silent: true });
+
+      if (failedCount > 0) {
+        const status = hasNetworkError ? 'error_red' : 'error';
+        setSyncUiStatus(hasNetworkError ? 'error_red' : 'idle');
+        setMessage(hasNetworkError
+          ? 'No se pudo completar la sincronización por conexión o timeout. La cola pendiente se mantiene intacta.'
+          : `Sincronización parcial: ${syncedCount} enviado(s), ${failedCount} pendiente(s).`);
+        return { status: hasNetworkError ? 'error_red' : status, syncedCount, failedCount };
+      }
+
+      setSyncUiStatus('éxito');
+      setMessage(syncedCount > 0 ? `Sincronización exitosa. ${syncedCount} registro(s) enviado(s).` : 'No hay datos pendientes por sincronizar.');
+      return { status: 'éxito', syncedCount, failedCount: 0 };
+    } catch (error) {
+      const syncError = createSyncError(error);
+      setSyncUiStatus('error_red');
+      setMessage(syncError.message);
+      return { status: 'error_red', error: syncError.message };
     } finally {
       setSyncing(false);
     }
@@ -880,6 +1277,95 @@ function App() {
     saveQueuedDocuments(next);
     setMessage("Documento eliminado del dispositivo y de Supabase.");
   }
+
+  async function deleteAdminDocument(record) {
+    if (!record || !canUseSupabase || !navigator.onLine) {
+      setMessage('Se requiere conexion para eliminar imagenes del panel administrador.');
+      return;
+    }
+
+    try {
+      await deleteRemoteRecord('document', {
+        id: record.id,
+        deleteToken: record.delete_token || record.deleteToken,
+      });
+      setAdminDocuments((items) => items.filter((item) => item.id !== record.id));
+      setDocuments((items) => {
+        const next = items.filter((item) => item.id !== record.id);
+        saveQueuedDocuments(next);
+        return next;
+      });
+      setMessage('Imagen de conduccion eliminada de Supabase y Storage.');
+    } catch (error) {
+      setMessage(error?.message || 'No se pudo eliminar la imagen de conduccion.');
+    }
+  }
+
+  async function deleteAllAdminMeasurements() {
+    if (!session || !canUseSupabase || !navigator.onLine) {
+      setMessage('Se requiere una sesion administrativa con conexion para eliminar todas las tasas.');
+      return;
+    }
+
+    setMessage('Eliminando tasas de riego...');
+    try {
+      const { data, error } = await supabase.functions.invoke(DELETE_FUNCTION, {
+        body: { kind: 'measurement_bulk' },
+      });
+      if (error) throw new Error(await getFunctionErrorMessage(error, 'No se pudo eliminar el historial de tasas.'));
+      if (!data?.ok) throw new Error(data?.error || 'No se pudo eliminar el historial de tasas.');
+      setAdminMeasurements([]);
+      setMessage(`Tasas de riego eliminadas: ${data.deletedCount ?? 'todas'}.`);
+    } catch (error) {
+      try {
+        const directDeleted = await deleteAdminMeasurementsDirectly();
+        if (directDeleted.length) {
+          const deletedIds = new Set(directDeleted.map((record) => record.id));
+          setAdminMeasurements((items) => items.filter((item) => !deletedIds.has(item.id)));
+          setMessage(`Tasas de riego eliminadas: ${directDeleted.length}.`);
+          return;
+        }
+
+        const records = await fetchAllAdminMeasurementDeleteRecords();
+        if (!records.length) {
+          setAdminMeasurements([]);
+          setMessage('No habia tasas de riego sincronizadas para eliminar.');
+          return;
+        }
+
+        let deletedCount = 0;
+        let failedCount = 0;
+        let lastError = '';
+        const deletedIds = new Set();
+        for (const record of records) {
+          if (!record.delete_token) {
+            failedCount += 1;
+            lastError = 'Hay registros antiguos sin token de eliminacion.';
+            continue;
+          }
+          try {
+            await deleteRemoteRecord('measurement', {
+              id: record.id,
+              deleteToken: record.delete_token,
+            });
+            deletedCount += 1;
+            deletedIds.add(record.id);
+          } catch (deleteError) {
+            failedCount += 1;
+            lastError = deleteError?.message || 'No se pudo eliminar una tasa.';
+          }
+        }
+
+        setAdminMeasurements((items) => items.filter((item) => !deletedIds.has(item.id)));
+        setMessage(failedCount
+          ? `Borrado parcial: ${deletedCount} tasa(s) eliminada(s), ${failedCount} pendiente(s). ${lastError}`
+          : `Tasas de riego eliminadas: ${deletedCount}.`);
+      } catch (fallbackError) {
+        setMessage(fallbackError?.message || error?.message || 'No se pudo eliminar el historial de tasas.');
+      }
+    }
+  }
+
   async function deleteMeasurement(record) {
     if (!record) return;
     if (record.syncStatus === "synced") {
@@ -900,6 +1386,49 @@ function App() {
     saveQueuedMeasurements(next);
     setMessage(record.syncStatus === "synced" ? "Medicion eliminada del dispositivo y de Supabase." : "Medicion eliminada del dispositivo.");
   }
+
+  function updateMeasurement(record, values) {
+    if (!record) return;
+    const nextValues = {
+      pile: onlyDigits(values.pile || ''),
+      phase: onlyLettersAndNumbers(values.phase || ''),
+      module: onlyDigits(values.module || ''),
+      panel: normalizePanel(values.panel || ''),
+      sample1: values.sample1,
+      sample2: values.sample2,
+      sample3: values.sample3,
+    };
+    if (!nextValues.pile || !nextValues.phase || !nextValues.module) {
+      setMessage('Complete pila, fase y módulo para guardar la edición.');
+      return false;
+    }
+    const calc = calculateMeasurement(nextValues);
+    const next = measurements.map((item) => {
+      if (item.id !== record.id) return item;
+      return {
+        ...item,
+        pile: nextValues.pile,
+        phase: nextValues.phase,
+        module: nextValues.module,
+        panel: nextValues.panel,
+        sample1: Number(nextValues.sample1 || 0),
+        sample2: Number(nextValues.sample2 || 0),
+        sample3: Number(nextValues.sample3 || 0),
+        totalVolume: Number(calc.totalVolume.toFixed(2)),
+        averageVolume: Number(calc.averageVolume.toFixed(2)),
+        irrigationRate: Number(calc.irrigationRate.toFixed(2)),
+        isModified: true,
+        modifiedAt: nowIso(),
+        syncStatus: 'pending',
+        syncError: '',
+      };
+    });
+    setMeasurements(next);
+    saveQueuedMeasurements(next);
+    setMessage('Medición actualizada en el historial local.');
+    return true;
+  }
+
   function toggleTheme() {
     setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
   }
@@ -936,6 +1465,7 @@ function App() {
           documents={documents}
           onNavigate={setScreen}
           onSync={syncPending}
+          syncUiStatus={syncUiStatus}
           onTheme={toggleTheme}
           onLogout={closeSession}
           theme={theme}
@@ -954,6 +1484,7 @@ function App() {
           records={measurements}
           onClearHistory={clearMeasurementHistory}
           onDeleteRecord={deleteMeasurement}
+          onUpdateRecord={updateMeasurement}
           onShareHistory={shareMeasurementHistory}
           onBack={() => setScreen('menu')}
           onSubmit={saveMeasurement}
@@ -1004,6 +1535,18 @@ function App() {
         />
       )}
 
+      {screen === 'surveys' && (
+        <SurveyScreen
+          operator={activeOperator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          onBack={() => setScreen('menu')}
+          onTheme={toggleTheme}
+          onLogout={closeSession}
+          theme={theme}
+        />
+      )}
+
       {screen === 'admin' && accessRole === 'admin' && (
         <AdminScreen
           operator={activeOperator}
@@ -1018,6 +1561,8 @@ function App() {
           onLogin={handleAdminLogin}
           onLogout={closeSession}
           onRefresh={loadAdminData}
+          onDeleteAllMeasurements={deleteAllAdminMeasurements}
+          onDeleteDocument={deleteAdminDocument}
           measurements={adminMeasurements}
           documents={adminDocuments}
           onBack={() => setScreen(accessRole === 'admin' ? 'menu' : 'login')}
@@ -1125,7 +1670,10 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLo
   );
 }
 
-function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, measurements, documents, onNavigate, onSync, onTheme, onLogout, theme }) {
+function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syncUiStatus, measurements, documents, onNavigate, onSync, onTheme, onLogout, theme }) {
+  const latestRate = measurements.length ? Number(measurements[0]?.irrigationRate || 0) : 0;
+  const pendingLabel = pendingCount === 1 ? 'pendiente' : 'pendientes';
+
   return (
     <section id="menu-screen">
       <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} />
@@ -1133,13 +1681,42 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, mea
         <p>Bienvenido, {operator}</p>
         <span>Seleccione el módulo de trabajo.</span>
       </div>
+      <div className="operation-summary">
+        <div className="operation-summary-main">
+          <span>Operación activa</span>
+          <strong>{isOnline ? 'Sistema en línea' : 'Trabajo offline'}</strong>
+          <p>{pendingCount} {pendingLabel} por sincronizar</p>
+        </div>
+        <div className="operation-metrics">
+          <div>
+            <strong>{measurements.length}</strong>
+            <span>Mediciones</span>
+          </div>
+          <div>
+            <strong>{documents.length}</strong>
+            <span>Documentos</span>
+          </div>
+          <div>
+            <strong>{latestRate.toFixed(1)}</strong>
+            <span>Última L/h</span>
+          </div>
+        </div>
+      </div>
       <div className="menu-list">
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
-        <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
-        <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
         <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />
+        <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
+        <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
+        <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />
         {accessRole === 'admin' && (
           <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
+        )}
+        {syncUiStatus !== 'idle' && (
+          <div className={`sync-status-banner ${syncUiStatus}`}>
+            {syncUiStatus === 'sincronizando' && 'Sincronizando datos...'}
+            {syncUiStatus === 'éxito' && 'Sincronización exitosa'}
+            {syncUiStatus === 'error_red' && 'Error de red. Datos pendientes conservados.'}
+          </div>
         )}
         <button className="btn-save menu-sync" type="button" onClick={onSync} disabled={syncing}>
           {syncing ? 'Sincronizando...' : `Sincronizar datos pendientes (${pendingCount})`}
@@ -1162,39 +1739,204 @@ function MenuCard({ icon, title, desc, onClick, alt, brown, lifting }) {
   );
 }
 
+function SurveyScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
+  return (
+    <section>
+      <Header title="Encuestas" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
+      <div className="content">
+        <div className="section-heading">
+          <span>Formularios externos</span>
+          <h2>Encuestas</h2>
+          <p>Seleccione el formulario correspondiente. Cada opción abrirá el enlace externo en el navegador del dispositivo.</p>
+        </div>
+        <div className="menu-list survey-list">
+          {SURVEY_LINKS.map((survey, index) => (
+            <MenuCard
+              key={survey.url}
+              icon={`E${index + 1}`}
+              title={survey.title}
+              desc="Abrir encuesta externa"
+              onClick={() => openExternalUrl(survey.url)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function LiftingScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
   const [section, setSection] = useState('formulas');
+  const [openFormula, setOpenFormula] = useState(null);
+  const [explanationId, setExplanationId] = useState(null);
+  const activeExplanation = explanationId ? LIFTING_FORMULA_EXPLANATIONS[explanationId] : null;
 
   return (
     <section>
       <Header title="Izajes" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="content">
-        <div className="lifting-menu">
-          <button className={section === 'formulas' ? 'active' : ''} type="button" onClick={() => setSection('formulas')}>Formulas</button>
-          <button className={section === 'weight' ? 'active' : ''} type="button" onClick={() => setSection('weight')}>Calculo de peso</button>
-          <button className={section === 'loadTables' ? 'active' : ''} type="button" onClick={() => setSection('loadTables')}>Tablas de carga</button>
-          <button className={section === 'documentation' ? 'active' : ''} type="button" onClick={() => setSection('documentation')}>Documentacion</button>
+        <div className="lifting-overview">
+          <div>
+            <span>Centro de herramientas</span>
+            <strong>Seleccione una categoría</strong>
+          </div>
+          <small>4 módulos</small>
         </div>
+
+        <nav className="lifting-menu" aria-label="Secciones de Izajes">
+          {LIFTING_SECTIONS.map((item) => {
+            const isActive = section === item.id;
+            return (
+              <button
+                className={isActive ? 'active' : ''}
+                type="button"
+                key={item.id}
+                aria-pressed={isActive}
+                onClick={() => setSection(item.id)}
+              >
+                <span className="lifting-menu-index" aria-hidden="true">{item.number}</span>
+                <span className="lifting-menu-copy">
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <span className="lifting-menu-state">{isActive ? 'Actual' : 'Abrir'}</span>
+              </button>
+            );
+          })}
+        </nav>
 
         {section === 'formulas' && (
           <>
             <div className="section-heading">
-              <span>Modulo de formulas</span>
-              <h2>Izajes</h2>
-              <p>Herramientas de apoyo para evaluacion operacional de maniobras de izaje.</p>
+              <span>Módulo 01</span>
+              <h2>Fórmulas de izaje</h2>
+              <p>Herramientas de apoyo para la evaluación operacional de maniobras de izaje.</p>
             </div>
-            <WorkCapacityCard />
-            <SlingGeometryCard />
-            <GravityCenterCard />
-            <BoomGeometryCard />
+            <div className="formula-accordion">
+              <FormulaAccordionItem
+                id="boom-geometry"
+                title="Ángulo y altura de pluma"
+                isOpen={openFormula === 'boom-geometry'}
+                onToggle={() => setOpenFormula((current) => (current === 'boom-geometry' ? null : 'boom-geometry'))}
+                onExplain={() => setExplanationId('boom-geometry')}
+              >
+                <BoomGeometryCard />
+              </FormulaAccordionItem>
+              <FormulaAccordionItem
+                id="work-capacity"
+                title="Capacidad de trabajo"
+                isOpen={openFormula === 'work-capacity'}
+                onToggle={() => setOpenFormula((current) => (current === 'work-capacity' ? null : 'work-capacity'))}
+                onExplain={() => setExplanationId('work-capacity')}
+              >
+                <WorkCapacityCard />
+              </FormulaAccordionItem>
+              <FormulaAccordionItem
+                id="sling-geometry"
+                title="Ángulo de trabajo y tensión de eslingas"
+                isOpen={openFormula === 'sling-geometry'}
+                onToggle={() => setOpenFormula((current) => (current === 'sling-geometry' ? null : 'sling-geometry'))}
+                onExplain={() => setExplanationId('sling-geometry')}
+              >
+                <SlingGeometryCard />
+              </FormulaAccordionItem>
+              <FormulaAccordionItem
+                id="gravity-center"
+                title="Centro de gravedad"
+                isOpen={openFormula === 'gravity-center'}
+                onToggle={() => setOpenFormula((current) => (current === 'gravity-center' ? null : 'gravity-center'))}
+                onExplain={() => setExplanationId('gravity-center')}
+              >
+                <GravityCenterCard />
+              </FormulaAccordionItem>
+            </div>
           </>
         )}
 
         {section === 'weight' && <LiftingWeightCalculators />}
-        {section === 'loadTables' && <LiftingPlaceholder title="Tablas de carga" text="Seccion preparada para registrar o consultar tablas de carga de gruas y equipos." />}
+        {section === 'loadTables' && <LoadTablesSection />}
         {section === 'documentation' && <LiftingDocumentationChecklist />}
       </div>
+      {activeExplanation && (
+        <FormulaExplanationModal
+          explanation={activeExplanation}
+          onClose={() => setExplanationId(null)}
+        />
+      )}
     </section>
+  );
+}
+
+function FormulaAccordionItem({ id, title, isOpen, onToggle, onExplain, children }) {
+  const contentId = `${id}-content`;
+
+  return (
+    <section className={`formula-accordion-item ${isOpen ? 'open' : ''}`}>
+      <div className="formula-accordion-header">
+        <button
+          className="formula-accordion-trigger"
+          type="button"
+          aria-expanded={isOpen}
+          aria-controls={contentId}
+          onClick={onToggle}
+        >
+          <span>{title}</span>
+          <strong>{isOpen ? 'Cerrar' : 'Abrir'}</strong>
+        </button>
+        <button
+          className="formula-explanation-button"
+          type="button"
+          aria-label={`Ver explicación de ${title}`}
+          onClick={onExplain}
+        >
+          Explicación
+        </button>
+      </div>
+      <div className="formula-accordion-body" id={contentId} hidden={!isOpen}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function FormulaExplanationModal({ explanation, onClose }) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="modal-overlay open formula-explanation-overlay" role="dialog" aria-modal="true" aria-labelledby="formula-explanation-title" onClick={onClose}>
+      <div className="modal-box formula-explanation-modal" onClick={(event) => event.stopPropagation()}>
+        <button className="formula-explanation-close" type="button" aria-label="Cerrar explicación" onClick={onClose} autoFocus>
+          ×
+        </button>
+        <span className="formula-explanation-eyebrow">Explicación de la fórmula</span>
+        <h3 id="formula-explanation-title">{explanation.title}</h3>
+        <p className="formula-explanation-purpose">{explanation.purpose}</p>
+
+        <div className="formula-explanation-section">
+          <strong>Procedimiento</strong>
+          <ol>
+            {explanation.steps.map((step) => <li key={step}>{step}</li>)}
+          </ol>
+        </div>
+
+        <div className="formula-explanation-section">
+          <strong>Resultado</strong>
+          <p>{explanation.result}</p>
+        </div>
+
+        <div className="formula-explanation-warning">
+          <strong>Importante</strong>
+          <p>{explanation.warning}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1247,8 +1989,8 @@ function SlingGeometryCard() {
       <div className="form-row">
         <Field label="Peso total" type="number" inputMode="decimal" value={values.peso} onChange={(value) => updateValue('peso', value)} />
         <Field label="Número de eslingas" type="number" inputMode="numeric" value={values.n} onChange={(value) => updateValue('n', value)} />
-        <Field label="Longitud eslinga (L)" type="number" inputMode="decimal" value={values.l} onChange={(value) => updateValue('l', value)} />
-        <Field label="Altura gancho a carga (H)" type="number" inputMode="decimal" value={values.h} onChange={(value) => updateValue('h', value)} />
+        <Field label="Longitud eslinga (L) (m)" type="number" inputMode="decimal" value={values.l} onChange={(value) => updateValue('l', value)} />
+        <Field label="Altura gancho a carga (H) (m)" type="number" inputMode="decimal" value={values.h} onChange={(value) => updateValue('h', value)} />
       </div>
       {hasError && <div className="weight-warning">La longitud de la eslinga debe ser mayor o igual a la altura.</div>}
       <div className="formula-results-grid">
@@ -1296,7 +2038,7 @@ function GravityCenterCard() {
         {pieces.map((piece) => (
           <div className="piece-row" key={piece.id}>
             <Field label="Peso" type="number" inputMode="decimal" value={piece.peso} onChange={(value) => updatePiece(piece.id, 'peso', value)} />
-            <Field label="Distancia al punto cero" type="number" inputMode="decimal" value={piece.distancia} onChange={(value) => updatePiece(piece.id, 'distancia', value)} />
+            <Field label="Distancia al punto cero (m)" type="number" inputMode="decimal" value={piece.distancia} onChange={(value) => updatePiece(piece.id, 'distancia', value)} />
             <button className="piece-remove" type="button" aria-label="Eliminar pieza" onClick={() => removePiece(piece.id)}>×</button>
           </div>
         ))}
@@ -1304,7 +2046,7 @@ function GravityCenterCard() {
       <button className="btn-secondary checklist-clear" type="button" onClick={addPiece}>Agregar pieza</button>
       <div className="formula-results-grid">
         <FormulaResult label="Peso total" value={hasValidValues ? result.peso_total.toFixed(2) : 'Ingrese valores'} />
-        <FormulaResult label="CG final" value={hasValidValues ? result.CG_final.toFixed(2) : 'Ingrese valores'} />
+        <FormulaResult label="CG final (m)" value={hasValidValues ? result.CG_final.toFixed(2) : 'Ingrese valores'} />
       </div>
     </div>
   );
@@ -1327,13 +2069,13 @@ function BoomGeometryCard() {
       <div className="card-title">Ángulo y altura de pluma</div>
       <p className="formula-description">Calcula el ángulo de trabajo de la pluma y la altura de la punta según longitud y radio de operación.</p>
       <div className="form-row">
-        <Field label="Longitud pluma (L)" type="number" inputMode="decimal" value={values.longitud_pluma} onChange={(value) => updateValue('longitud_pluma', value)} />
-        <Field label="Radio operación (R)" type="number" inputMode="decimal" value={values.radio_operacion} onChange={(value) => updateValue('radio_operacion', value)} />
+        <Field label="Longitud pluma (L) (m)" type="number" inputMode="decimal" value={values.longitud_pluma} onChange={(value) => updateValue('longitud_pluma', value)} />
+        <Field label="Radio operación (R) (m)" type="number" inputMode="decimal" value={values.radio_operacion} onChange={(value) => updateValue('radio_operacion', value)} />
       </div>
       {hasError && <div className="weight-warning">El radio de operación debe ser menor que la longitud de pluma.</div>}
       <div className="formula-results-grid">
         <FormulaResult label="Ángulo pluma" value={result ? `${result.angulo_pluma_grados.toFixed(2)}°` : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
-        <FormulaResult label="Altura punta pluma" value={result ? result.altura_punta_pluma.toFixed(2) : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
+        <FormulaResult label="Altura punta pluma (m)" value={result ? result.altura_punta_pluma.toFixed(2) : hasError ? 'Error' : 'Ingrese valores'} status={hasError ? 'danger' : 'safe'} />
       </div>
     </div>
   );
@@ -1470,11 +2212,60 @@ function WeightCalculatorCard({ title, fields, volume, density, warning = '', on
   );
 }
 
-function LiftingPlaceholder({ title, text }) {
+function LoadTablesSection() {
+  const [series, setSeries] = useState('');
+  const [submodel, setSubmodel] = useState('');
+  const [preview, setPreview] = useState(null);
+  const seriesKeys = Object.keys(LOAD_TABLE_SERIES);
+  const selectedSeries = series ? LOAD_TABLE_SERIES[series] : null;
+  const submodels = selectedSeries ? Object.keys(selectedSeries.submodels) : [];
+  const selectedTable = selectedSeries && submodel ? selectedSeries.submodels[submodel] : null;
+
+  function handleSeriesChange(value) {
+    setSeries(value);
+    setSubmodel('');
+  }
+
   return (
     <div className="card lifting-placeholder">
-      <div className="card-title">{title}</div>
-      <p>{text}</p>
+      <div className="card-title">Tablas de carga</div>
+      <p>Seleccione la serie principal de pluma y el submodelo para consultar la tabla asociada.</p>
+      <div className="form-row load-table-selectors">
+        <div className="form-group">
+          <label htmlFor="load-table-series">Serie principal de pluma</label>
+          <select id="load-table-series" value={series} onChange={(event) => handleSeriesChange(event.target.value)}>
+            <option value="">Seleccione serie</option>
+            {seriesKeys.map((key) => (
+              <option key={key} value={key}>{LOAD_TABLE_SERIES[key].label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="load-table-submodel">Submodelo</label>
+          <select id="load-table-submodel" value={submodel} onChange={(event) => setSubmodel(event.target.value)} disabled={!selectedSeries}>
+            <option value="">Seleccione submodelo</option>
+            {submodels.map((key) => (
+              <option key={key} value={key}>{selectedSeries.submodels[key].label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {selectedTable ? (
+        <div className="cond-gallery">
+          <article className="cond-thumb">
+            <button className="image-preview-button" type="button" onClick={() => setPreview({ src: selectedTable.image, title: selectedTable.label })}>
+              <img src={selectedTable.image} alt={`Tabla de carga ${selectedTable.label}`} />
+            </button>
+            <div className="cond-thumb-info">
+              <strong>{selectedTable.label}</strong>
+              <span>Categoria {selectedSeries.label}</span>
+            </div>
+          </article>
+        </div>
+      ) : (
+        <div className="cond-empty-hint">Seleccione una serie y un submodelo para visualizar la tabla de carga.</div>
+      )}
+      {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }
@@ -1521,7 +2312,7 @@ function LiftingDocumentationChecklist() {
   );
 }
 
-function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onClearHistory, onDeleteRecord, onShareHistory, onBack, onSubmit, onTheme, onLogout, theme }) {
+function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setMeasurement, tab, setTab, records, onClearHistory, onDeleteRecord, onUpdateRecord, onShareHistory, onBack, onSubmit, onTheme, onLogout, theme }) {
   const preview = calculateMeasurement(measurement);
   const [timerSeconds, setTimerSeconds] = useState(36);
   const [timerRunning, setTimerRunning] = useState(false);
@@ -1628,7 +2419,7 @@ function MeasurementScreen({ operator, pendingCount, isOnline, measurement, setM
           </form>
         )}
 
-        {tab === 'records' && <LocalMeasurements records={records} onClearHistory={onClearHistory} onDeleteRecord={onDeleteRecord} onShareHistory={onShareHistory} />}
+        {tab === 'records' && <LocalMeasurements records={records} onClearHistory={onClearHistory} onDeleteRecord={onDeleteRecord} onUpdateRecord={onUpdateRecord} onShareHistory={onShareHistory} />}
       </div>
     </section>
   );
@@ -1643,8 +2434,37 @@ function Field({ label, value, onChange, type = 'text', inputMode, maxLength }) 
   );
 }
 
-function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onShareHistory }) {
+function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onUpdateRecord, onShareHistory }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState(null);
+
+  function startEdit(record) {
+    setEditingId(record.id);
+    setDraft({
+      pile: record.pile || '',
+      phase: record.phase || '',
+      module: record.module || '',
+      panel: record.panel || '',
+      sample1: String(record.sample1 ?? ''),
+      sample2: String(record.sample2 ?? ''),
+      sample3: String(record.sample3 ?? ''),
+    });
+  }
+
+  function updateDraft(key, value) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setDraft(null);
+  }
+
+  function saveEdit(record) {
+    const saved = onUpdateRecord(record, draft);
+    if (saved) cancelEdit();
+  }
 
   if (!records.length) {
     return <div className="empty"><div className="empty-icon">Sin registros</div><p>No hay registros disponibles.</p></div>;
@@ -1662,11 +2482,16 @@ function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onShareHis
         <button className="btn-share-report" type="button" onClick={onShareHistory}>Compartir reporte Excel</button>
         <button className="btn-danger-outline" type="button" onClick={() => setConfirmOpen(true)}>Eliminar todo el historial</button>
       </div>
-      {records.map((record) => (
-        <article className="record-item" key={record.id}>
+      {records.map((record) => {
+        const isEditing = editingId === record.id;
+        return (
+        <article className={`record-item ${isEditing ? 'editing' : ''}`} key={record.id}>
           <div className="rec-header">
             <div>
-              <strong>Pila {record.pile} · Fase {record.phase} · Módulo {record.module} · Paño {record.panel || '-'}</strong>
+              <strong>
+                Pila {record.pile} · Fase {record.phase} · Módulo {record.module} · Paño {record.panel || '-'}
+                {record.isModified && <span className="modified-badge">(Modificado)</span>}
+              </strong>
               <p className="record-meta">
                 <span>{formatDate(record.createdAt)} · {record.operatorName}</span>
                 <span>Total: {Number(record.totalVolume || 0).toFixed(2)} mL</span>
@@ -1674,21 +2499,54 @@ function LocalMeasurements({ records, onClearHistory, onDeleteRecord, onShareHis
               </p>
             </div>
             <span className={`sync-pill ${record.syncStatus === 'synced' ? 'synced' : ''}`}>{record.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
-            <button
-              className="btn-record-delete"
-              type="button"
-              aria-label="Eliminar medición"
-              onClick={() => {
-                if (window.confirm('¿Confirma que desea eliminar esta medición?')) onDeleteRecord(record);
-              }}
-            >
-              ×
-            </button>
           </div>
-          <div className="record-tasa">{record.irrigationRate} L/h</div>
-          {record.observation ? <p className="record-note">{record.observation}</p> : null}
+          {isEditing ? (
+            <div className="record-edit-form">
+              <div className="form-row">
+                <Field label="Pila" inputMode="numeric" value={draft.pile} onChange={(value) => updateDraft('pile', onlyDigits(value))} />
+                <Field label="Fase" value={draft.phase} onChange={(value) => updateDraft('phase', onlyLettersAndNumbers(value))} />
+              </div>
+              <div className="form-row">
+                <Field label="Módulo" inputMode="numeric" value={draft.module} onChange={(value) => updateDraft('module', onlyDigits(value))} />
+                <Field label="Paño" maxLength={1} value={draft.panel} onChange={(value) => updateDraft('panel', normalizePanel(value))} />
+              </div>
+              <div className="points-grid">
+                <Field label="Punto 1" type="number" value={draft.sample1} onChange={(value) => updateDraft('sample1', value)} />
+                <Field label="Punto 2" type="number" value={draft.sample2} onChange={(value) => updateDraft('sample2', value)} />
+                <Field label="Punto 3" type="number" value={draft.sample3} onChange={(value) => updateDraft('sample3', value)} />
+              </div>
+              <div className="record-edit-actions">
+                <button className="btn-save compact" type="button" onClick={() => saveEdit(record)}>Guardar</button>
+                <button className="btn-secondary compact" type="button" onClick={cancelEdit}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="record-tasa">{record.irrigationRate} L/h</div>
+              <div className="record-points">
+                <span>P1: {Number(record.sample1 || 0).toFixed(2)} mL</span>
+                <span>P2: {Number(record.sample2 || 0).toFixed(2)} mL</span>
+                <span>P3: {Number(record.sample3 || 0).toFixed(2)} mL</span>
+              </div>
+              {record.observation ? <p className="record-note">{record.observation}</p> : null}
+              <div className="record-row-actions">
+                <button className="btn-secondary compact" type="button" onClick={() => startEdit(record)}>Editar</button>
+                <button
+                  className="btn-record-delete"
+                  type="button"
+                  aria-label="Eliminar medición"
+                  onClick={() => {
+                    if (window.confirm('¿Confirma que desea eliminar esta medición?')) onDeleteRecord(record);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </>
+          )}
         </article>
-      ))}
+      );
+      })}
       {confirmOpen && (
         <div className="modal-overlay open" role="dialog" aria-modal="true" onClick={() => setConfirmOpen(false)}>
           <div className="modal-box" onClick={(event) => event.stopPropagation()}>
@@ -1901,6 +2759,8 @@ function AdminScreen({
   onLogin,
   onLogout,
   onRefresh,
+  onDeleteAllMeasurements,
+  onDeleteDocument,
   measurements,
   documents,
   onBack,
@@ -1908,6 +2768,9 @@ function AdminScreen({
   theme,
 }) {
   const [activeAdminCategory, setActiveAdminCategory] = useState('measurements');
+  const averageRate = measurements.length
+    ? measurements.reduce((sum, row) => sum + Number(row.irrigation_rate_lh || 0), 0) / measurements.length
+    : 0;
 
   return (
     <section>
@@ -1937,6 +2800,20 @@ function AdminScreen({
                 <button className="btn-secondary compact" type="button" onClick={onLogout}>Salir</button>
               </div>
             </div>
+            <div className="admin-dashboard-grid">
+              <div className="admin-kpi-card">
+                <span>Mediciones</span>
+                <strong>{measurements.length}</strong>
+              </div>
+              <div className="admin-kpi-card">
+                <span>Promedio L/h</span>
+                <strong>{averageRate.toFixed(1)}</strong>
+              </div>
+              <div className="admin-kpi-card">
+                <span>Documentos</span>
+                <strong>{documents.length}</strong>
+              </div>
+            </div>
             <div className="admin-category-tabs">
               <button
                 className={activeAdminCategory === 'measurements' ? 'active' : ''}
@@ -1955,8 +2832,8 @@ function AdminScreen({
                 <span>{documents.length} documento(s)</span>
               </button>
             </div>
-            {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} />}
-            {activeAdminCategory === 'documents' && <AdminDocuments rows={documents} />}
+            {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} onDeleteAll={onDeleteAllMeasurements} />}
+            {activeAdminCategory === 'documents' && <AdminDocuments rows={documents} onDeleteDocument={onDeleteDocument} />}
           </>
         )}
       </div>
@@ -1964,8 +2841,10 @@ function AdminScreen({
   );
 }
 
-function AdminMeasurements({ rows }) {
+function AdminMeasurements({ rows, onDeleteAll }) {
   const [exportMessage, setExportMessage] = useState('');
+  const [confirmStep, setConfirmStep] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function exportRows() {
     if (!rows.length) return;
@@ -1985,9 +2864,15 @@ function AdminMeasurements({ rows }) {
           <div className="card-title">Historial de tasas de riego</div>
           <p>Registros sincronizados desde los operadores en terreno.</p>
         </div>
-        <button className="btn-share-report admin-export-button" type="button" onClick={exportRows} disabled={!rows.length}>Compartir reporte Excel</button>
+        <div className="admin-section-actions">
+          <button className="btn-share-report admin-export-button" type="button" onClick={exportRows} disabled={!rows.length || isDeleting}>Compartir reporte Excel</button>
+          <button className="danger-button admin-delete-all-button" type="button" onClick={() => setConfirmStep(1)} disabled={!rows.length || isDeleting}>
+            {isDeleting ? 'Eliminando...' : 'Eliminar TODAS las tasas de riego'}
+          </button>
+        </div>
       </div>
       {exportMessage && <p className="admin-export-message">{exportMessage}</p>}
+      {isDeleting && <p className="admin-export-message">Eliminando registros en Supabase. Mantenga esta pantalla abierta.</p>}
       {!rows.length && <div className="cond-empty-hint">No hay mediciones sincronizadas.</div>}
       <div className="table-wrap">
         <table>
@@ -2011,30 +2896,116 @@ function AdminMeasurements({ rows }) {
           </tbody>
         </table>
       </div>
+      {confirmStep > 0 && (
+        <div className="modal-overlay open" role="dialog" aria-modal="true" onClick={() => setConfirmStep(0)}>
+          <div className="modal-box danger-confirm-modal" onClick={(event) => event.stopPropagation()}>
+            {confirmStep === 1 ? (
+              <>
+                <div className="modal-title">¿Estas seguro?</div>
+                <p className="modal-text">Esta accion eliminara todas las tasas de riego sincronizadas en Supabase.</p>
+                <div className="modal-actions">
+                  <button className="btn-secondary" type="button" onClick={() => setConfirmStep(0)}>Cancelar</button>
+                  <button className="danger-button" type="button" onClick={() => setConfirmStep(2)}>Si, continuar</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="modal-title danger-title">Borrado definitivo</div>
+                <p className="modal-text">No se podra recuperar este historial desde la app. Confirme solo si ya respaldo la informacion necesaria.</p>
+                <div className="modal-actions">
+                  <button className="btn-secondary" type="button" onClick={() => setConfirmStep(0)}>Cancelar</button>
+                  <button
+                    className="danger-button danger-final-button"
+                    type="button"
+                    disabled={isDeleting}
+                    onClick={async () => {
+                      setConfirmStep(0);
+                      setIsDeleting(true);
+                      try {
+                        await onDeleteAll?.();
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                  >
+                    {isDeleting ? 'Eliminando...' : 'Eliminar definitivamente'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function AdminDocuments({ rows }) {
+function TrashIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+      <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2l1 11h4l1-11h2l-1.2 13H8.2L7 9Z" />
+    </svg>
+  );
+}
+
+function AdminDocuments({ rows, onDeleteDocument }) {
   const [preview, setPreview] = useState(null);
+  const [openOperator, setOpenOperator] = useState('');
+  const operatorGroups = useMemo(() => {
+    const groups = new Map();
+    for (const doc of rows) {
+      const name = doc.driver_name || doc.operator_name || 'Sin operador';
+      if (!groups.has(name)) groups.set(name, []);
+      groups.get(name).push(doc);
+    }
+    return Array.from(groups.entries()).map(([name, documents]) => ({ name, documents }));
+  }, [rows]);
+  const selectedGroup = operatorGroups.find((group) => group.name === openOperator) || null;
 
   return (
     <div className="card">
-      <div className="card-title">Documentación de conducción</div>
+      <div className="card-title">Documentacion de conduccion</div>
       {!rows.length && <div className="cond-empty-hint">No hay documentos sincronizados.</div>}
-      <div className="admin-doc-grid">
-        {rows.map((doc) => (
-          <article key={doc.id} className="admin-doc-card">
-            {doc.signedUrl ? (
-              <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.signedUrl, title: doc.file_name })}>
-                <img src={doc.signedUrl} alt={doc.file_name} />
+      {operatorGroups.length > 0 && (
+        <div className="admin-driver-list">
+          {operatorGroups.map((group) => (
+            <button
+              key={group.name}
+              className={`admin-driver-row ${openOperator === group.name ? 'active' : ''}`}
+              type="button"
+              onClick={() => setOpenOperator((current) => (current === group.name ? '' : group.name))}
+            >
+              <span>{group.name}</span>
+              <strong>{group.documents.length} imagen(es)</strong>
+            </button>
+          ))}
+        </div>
+      )}
+      {selectedGroup && (
+        <div className="admin-doc-grid">
+          {selectedGroup.documents.map((doc) => (
+            <article key={doc.id} className="admin-doc-card">
+              {doc.signedUrl ? (
+                <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.signedUrl, title: doc.file_name })}>
+                  <img src={doc.signedUrl} alt={doc.file_name} />
+                </button>
+              ) : null}
+              <div className="admin-doc-meta">
+                <strong>{doc.file_name}</strong>
+                <span>{formatDate(doc.uploaded_at)}</span>
+              </div>
+              <button
+                className="admin-doc-trash"
+                type="button"
+                aria-label={`Eliminar ${doc.file_name}`}
+                onClick={() => onDeleteDocument?.(doc)}
+              >
+                <TrashIcon />
               </button>
-            ) : null}
-            <strong>{doc.driver_name}</strong>
-            <span>{formatDate(doc.uploaded_at)} · {doc.file_name}</span>
-          </article>
-        ))}
-      </div>
+            </article>
+          ))}
+        </div>
+      )}
       {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
     </div>
   );

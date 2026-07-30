@@ -1,4 +1,4 @@
-# Mantos App
+# Mantos App - Version 4
 
 Aplicacion operacional para registrar tasas de riego, gestionar documentacion de conduccion y consultar un glosario tecnico asociado a lixiviacion por riego.
 
@@ -20,7 +20,11 @@ Aplicacion operacional para registrar tasas de riego, gestionar documentacion de
 - Historial administrativo de tasas de riego.
 - Revision de conductores que subieron documentacion cada dia.
 - Glosario tecnico con modo de prueba.
-- Modulo Izajes con formulas, calculo de peso y checklist documental.
+- Modulo Izajes con formulas desplegables, explicaciones operacionales y calculo de peso.
+- Tablas de carga F660 con visualizacion ampliable.
+- Checklist de documentacion previa a maniobra.
+- Acceso a encuestas operacionales externas.
+- Proyecto Android con icono corporativo adaptativo de Mantos Group.
 
 ## Configuracion local
 
@@ -50,6 +54,18 @@ npm run dev
 3. Mantener privado el bucket `conduction-documents`.
 
 Las politicas RLS incluidas permiten que la app en terreno inserte registros y cargue imagenes, pero solo usuarios autenticados pueden ver el historial de tasas de riego y las imagenes subidas.
+
+## Proyecto Android
+
+El contenedor Android se encuentra en `build-apk-nuevo/tasa-riego-apk`.
+
+```bash
+cd build-apk-nuevo/tasa-riego-apk
+npm install
+npx cap sync android
+```
+
+El repositorio conserva el codigo Android y los recursos del icono. Las dependencias, caches, contenido web copiado y archivos APK se excluyen del control de versiones.
 
 ## Notas
 

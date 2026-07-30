@@ -1,0 +1,1459 @@
+<!doctype html>
+<html lang="es" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos Group - Izajes</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --blue-950: #061744;
+        --blue-800: #0647a5;
+        --blue-600: #1672d4;
+        --blue-100: #d8e8fb;
+        --bg: #eaf3fc;
+        --card: #ffffff;
+        --surface: #f3f8fd;
+        --border: #a9bfd8;
+        --text: #07172c;
+        --muted: #405b78;
+        --shadow: 0 12px 30px rgba(6, 23, 68, 0.12);
+      }
+
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --blue-600: #78bdff;
+        --blue-100: #143556;
+        --bg: #07111f;
+        --card: #101c2d;
+        --surface: #142a42;
+        --border: #4a6684;
+        --text: #eef5ff;
+        --muted: #bed2e8;
+        --shadow: 0 14px 34px rgba(0, 0, 0, 0.32);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background: #cdd9e8;
+        color: var(--text);
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      button:focus-visible {
+        outline: 3px solid rgba(22, 114, 212, 0.35);
+        outline-offset: 3px;
+      }
+
+      .app {
+        width: min(100%, 480px);
+        min-height: 100vh;
+        margin: 0 auto;
+        background: var(--bg);
+        box-shadow: 0 0 70px rgba(6, 23, 68, 0.25);
+      }
+
+      header {
+        padding: 18px 14px 16px;
+        background: linear-gradient(180deg, #061744 0%, #0647a5 100%);
+        color: #fff;
+        box-shadow: 0 14px 28px rgba(6, 23, 68, 0.24);
+      }
+
+      .header-top {
+        display: grid;
+        grid-template-columns: 48px 1fr 48px;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .header-top button {
+        width: 48px;
+        min-height: 48px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .brand strong,
+      .brand span {
+        display: block;
+      }
+
+      .brand strong {
+        font-size: 18px;
+        font-weight: 900;
+      }
+
+      .brand span {
+        margin-top: 2px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      main {
+        padding: 14px 14px 32px;
+      }
+
+      .overview {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 14px 16px;
+        border: 1.5px solid var(--border);
+        border-left: 4px solid var(--blue-600);
+        border-radius: 8px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .overview span,
+      .overview strong {
+        display: block;
+      }
+
+      .overview span {
+        margin-bottom: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .overview strong {
+        font-size: 17px;
+        line-height: 1.25;
+      }
+
+      .overview small {
+        flex: 0 0 auto;
+        padding: 6px 8px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      nav {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin: 10px 0 24px;
+      }
+
+      .nav-item {
+        position: relative;
+        display: grid;
+        min-width: 0;
+        min-height: 92px;
+        grid-template-columns: 34px minmax(0, 1fr);
+        grid-template-rows: auto auto;
+        column-gap: 10px;
+        align-content: center;
+        padding: 12px;
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        color: var(--text);
+        text-align: left;
+        transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+      }
+
+      .nav-item::before {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 4px;
+        background: transparent;
+        content: "";
+      }
+
+      .nav-item.active {
+        border-color: var(--blue-600);
+        background: var(--blue-600);
+        color: #fff;
+      }
+
+      .nav-item.active::before {
+        background: #fff;
+      }
+
+      .index {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        grid-row: 1 / span 2;
+        place-items: center;
+        align-self: center;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface);
+        color: var(--blue-950);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .nav-copy strong,
+      .nav-copy small {
+        display: block;
+      }
+
+      .nav-copy strong {
+        font-size: 13px;
+        line-height: 1.25;
+      }
+
+      .nav-copy small {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 1.3;
+      }
+
+      .state {
+        grid-column: 2;
+        align-self: end;
+        margin-top: 6px;
+        color: var(--blue-600);
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .nav-item.active .index {
+        border-color: rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+      }
+
+      .nav-item.active .nav-copy small,
+      .nav-item.active .state {
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .section-heading {
+        margin-bottom: 14px;
+      }
+
+      .section-heading span {
+        color: var(--blue-600);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .section-heading h1 {
+        margin: 4px 0;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      .section-heading p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .card {
+        padding: 18px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .card + .card {
+        margin-top: 12px;
+      }
+
+      .card-title {
+        margin-bottom: 6px;
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .card p {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .fields {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 850;
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-height: 48px;
+        padding: 10px 12px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        margin-top: 6px;
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .result {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 12px;
+        background: var(--surface);
+      }
+
+      .result span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .result strong {
+        color: var(--blue-600);
+      }
+
+      .formula-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .formula-item {
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .formula-item.open {
+        border-color: var(--blue-600);
+      }
+
+      .formula-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: stretch;
+        background: var(--card);
+        transition: background-color 180ms ease;
+      }
+
+      .formula-toggle {
+        display: flex;
+        width: 100%;
+        min-height: 64px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+        transition: background-color 180ms ease, color 180ms ease;
+      }
+
+      .formula-toggle > span {
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.35;
+      }
+
+      .formula-toggle > strong {
+        flex: 0 0 auto;
+        color: var(--blue-600);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .formula-item.open .formula-header {
+        background: var(--blue-600);
+      }
+
+      .formula-item.open .formula-toggle {
+        background: transparent;
+        color: #fff;
+      }
+
+      .formula-item.open .formula-toggle > strong {
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .formula-body {
+        padding: 16px;
+        border-top: 1.5px solid var(--border);
+        background: var(--card);
+      }
+
+      .formula-explain {
+        align-self: center;
+        min-height: 44px;
+        padding: 9px 14px;
+        border: 1.5px solid var(--blue-600);
+        border-radius: 8px;
+        margin: 8px 10px 8px 0;
+        background: var(--blue-100);
+        color: var(--blue-950);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .formula-item.open .formula-explain {
+        border-color: rgba(255, 255, 255, 0.8);
+        background: #fff;
+        color: var(--blue-950);
+      }
+
+      @media (max-width: 380px) {
+        .formula-toggle {
+          align-items: flex-start;
+          flex-direction: column;
+          justify-content: center;
+          gap: 2px;
+        }
+
+        .formula-explain {
+          padding-inline: 11px;
+        }
+      }
+
+      .explanation-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 70;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-top: 16px;
+        background: rgba(0, 0, 0, 0.58);
+      }
+
+      .explanation-overlay[hidden] {
+        display: none;
+      }
+
+      .explanation-modal {
+        position: relative;
+        width: min(100%, 480px);
+        max-height: calc(100dvh - 16px);
+        padding: 24px 20px 28px;
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 16px 16px 0 0;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .explanation-modal > span {
+        color: var(--blue-600);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .explanation-modal h2 {
+        padding-right: 50px;
+        margin: 5px 0 10px;
+        font-size: 21px;
+        line-height: 1.25;
+      }
+
+      .explanation-modal > p,
+      .explanation-block p,
+      .explanation-block li {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .explanation-modal > p {
+        margin: 0 0 18px;
+      }
+
+      .explanation-block {
+        padding: 14px 0;
+        border-top: 1px solid var(--border);
+      }
+
+      .explanation-block strong {
+        display: block;
+        margin-bottom: 7px;
+        font-size: 13px;
+      }
+
+      .explanation-block ol {
+        padding-left: 20px;
+        margin: 0;
+      }
+
+      .explanation-block li {
+        margin-bottom: 8px;
+      }
+
+      .explanation-block p {
+        margin: 0;
+      }
+
+      .explanation-warning {
+        padding: 13px 14px;
+        border: 1.5px solid #9b6400;
+        border-radius: 8px;
+        margin: 2px 0 18px;
+        background: #fff4d6;
+        color: #704700;
+      }
+
+      .explanation-warning strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+      }
+
+      .explanation-warning p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .explanation-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        display: grid;
+        width: 44px;
+        min-height: 44px;
+        height: 44px;
+        place-items: center;
+        padding: 0;
+        border: 1.5px solid #b42318;
+        border-radius: 8px;
+        background: #fff0ee;
+        color: #b42318;
+        font-size: 27px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .explanation-close:active {
+        background: #b42318;
+        color: #fff;
+      }
+
+      .module-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .module-card {
+        padding: 18px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .module-card p {
+        margin: 0 0 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .weight-fields-preview {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .measure-preview {
+        min-width: 0;
+      }
+
+      .unit-switch {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        padding: 4px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 6px;
+        background: var(--surface);
+      }
+
+      .unit-switch button {
+        min-height: 38px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .unit-switch button.active {
+        background: var(--blue-950);
+        color: #fff;
+      }
+
+      .weight-output,
+      .checklist-progress-preview {
+        padding: 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-top: 14px;
+        background: var(--surface);
+      }
+
+      .weight-output span,
+      .weight-output strong {
+        display: block;
+      }
+
+      .weight-output span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .weight-output strong {
+        margin-top: 4px;
+        color: var(--blue-600);
+        font-size: 20px;
+        font-weight: 900;
+      }
+
+      .weight-alert {
+        display: none;
+        padding: 10px 12px;
+        border: 1px solid #b42318;
+        border-radius: 8px;
+        margin-top: 10px;
+        background: #fff0ee;
+        color: #8f1711;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .table-selectors {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .table-empty {
+        padding: 24px 14px;
+        border: 1.5px dashed var(--border);
+        border-radius: 8px;
+        margin-top: 14px;
+        background: var(--surface);
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 750;
+        text-align: center;
+      }
+
+      .table-preview {
+        overflow: hidden;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        margin-top: 14px;
+        background: var(--surface);
+      }
+
+      .table-preview img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .table-preview div {
+        padding: 12px;
+      }
+
+      .table-preview strong,
+      .table-preview span {
+        display: block;
+      }
+
+      .table-preview span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .checklist-head-preview {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .checklist-head-preview p {
+        margin: 4px 0 0;
+      }
+
+      .checklist-progress-preview {
+        min-width: 72px;
+        margin-top: 0;
+        color: #176b45;
+        text-align: center;
+      }
+
+      .checklist-progress-preview strong,
+      .checklist-progress-preview span {
+        display: block;
+      }
+
+      .checklist-progress-preview span {
+        margin-top: 3px;
+        font-size: 11px;
+      }
+
+      .checklist-preview {
+        display: grid;
+        gap: 8px;
+      }
+
+      .checklist-row-preview {
+        display: grid;
+        min-height: 50px;
+        grid-template-columns: auto auto 1fr;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .checklist-row-preview input {
+        width: 20px;
+        min-height: 20px;
+        margin: 0;
+        accent-color: #176b45;
+      }
+
+      .checklist-row-preview small {
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .checklist-row-preview span {
+        font-size: 13px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .checklist-row-preview.checked {
+        border-color: #278d5c;
+        background: #e5f6ed;
+      }
+
+      .checklist-clear-preview {
+        width: 100%;
+        min-height: 48px;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        margin-top: 12px;
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 900;
+      }
+
+      :root[data-theme="dark"] body {
+        background: #020914;
+      }
+
+      :root[data-theme="dark"] .nav-item.active {
+        color: #06101d;
+      }
+
+      :root[data-theme="dark"] .nav-item.active::before {
+        background: #06101d;
+      }
+
+      :root[data-theme="dark"] .nav-item.active .index {
+        border-color: rgba(6, 16, 29, 0.32);
+        background: rgba(6, 16, 29, 0.12);
+        color: #06101d;
+      }
+
+      :root[data-theme="dark"] .nav-item.active .nav-copy small,
+      :root[data-theme="dark"] .nav-item.active .state {
+        color: rgba(6, 16, 29, 0.74);
+      }
+
+      :root[data-theme="dark"] .formula-item.open .formula-header {
+        background: var(--blue-600);
+      }
+
+      :root[data-theme="dark"] .formula-item.open .formula-toggle {
+        background: transparent;
+        color: #06101d;
+      }
+
+      :root[data-theme="dark"] .formula-item.open .formula-toggle > strong {
+        color: rgba(6, 16, 29, 0.74);
+      }
+
+      :root[data-theme="dark"] .formula-explain {
+        color: var(--blue-600);
+      }
+
+      :root[data-theme="dark"] .formula-item.open .formula-explain {
+        border-color: rgba(6, 16, 29, 0.72);
+        background: rgba(6, 16, 29, 0.92);
+        color: #fff;
+      }
+
+      :root[data-theme="dark"] .explanation-warning {
+        border-color: #e9b95c;
+        background: #322710;
+        color: #ffe1a6;
+      }
+
+      :root[data-theme="dark"] .explanation-close {
+        border-color: #ffb4ab;
+        background: #3a1513;
+        color: #ffb4ab;
+      }
+
+      :root[data-theme="dark"] .weight-alert {
+        border-color: #ffb4ab;
+        background: #3a1513;
+        color: #ffb4ab;
+      }
+
+      :root[data-theme="dark"] .checklist-row-preview.checked {
+        border-color: #75e0a7;
+        background: #133426;
+      }
+
+      @media (max-width: 360px) {
+        nav,
+        .fields,
+        .weight-fields-preview,
+        .table-selectors {
+          grid-template-columns: 1fr;
+        }
+
+        .nav-item {
+          min-height: 78px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="header-top">
+          <button type="button" aria-label="Volver">‹</button>
+          <div class="brand">
+            <strong>Izajes</strong>
+            <span>Mantos Group · Operación en terreno</span>
+          </div>
+          <button id="theme" type="button" aria-label="Cambiar modo de color">◐</button>
+        </div>
+      </header>
+
+      <main>
+        <div class="overview">
+          <div>
+            <span>Centro de herramientas</span>
+            <strong>Seleccione una categoría</strong>
+          </div>
+          <small>4 módulos</small>
+        </div>
+
+        <nav aria-label="Secciones de Izajes">
+          <button class="nav-item active" type="button" data-section="formulas" aria-pressed="true">
+            <span class="index">01</span>
+            <span class="nav-copy"><strong>Fórmulas</strong><small>Cálculos operacionales</small></span>
+            <span class="state">Actual</span>
+          </button>
+          <button class="nav-item" type="button" data-section="weight" aria-pressed="false">
+            <span class="index">02</span>
+            <span class="nav-copy"><strong>Cálculo de peso</strong><small>Pesos por geometría</small></span>
+            <span class="state">Abrir</span>
+          </button>
+          <button class="nav-item" type="button" data-section="tables" aria-pressed="false">
+            <span class="index">03</span>
+            <span class="nav-copy"><strong>Tablas de carga</strong><small>Series y submodelos</small></span>
+            <span class="state">Abrir</span>
+          </button>
+          <button class="nav-item" type="button" data-section="docs" aria-pressed="false">
+            <span class="index">04</span>
+            <span class="nav-copy"><strong>Documentación</strong><small>Control previo</small></span>
+            <span class="state">Abrir</span>
+          </button>
+        </nav>
+
+        <div id="content"></div>
+      </main>
+    </div>
+
+    <div id="explanation-overlay" class="explanation-overlay" role="dialog" aria-modal="true" aria-labelledby="explanation-title" hidden>
+      <div class="explanation-modal">
+        <button id="explanation-close" class="explanation-close" type="button" aria-label="Cerrar explicación">×</button>
+        <span>Explicación de la fórmula</span>
+        <h2 id="explanation-title"></h2>
+        <p id="explanation-purpose"></p>
+        <div class="explanation-block">
+          <strong>Procedimiento</strong>
+          <ol id="explanation-steps"></ol>
+        </div>
+        <div class="explanation-block">
+          <strong>Resultado</strong>
+          <p id="explanation-result"></p>
+        </div>
+        <div class="explanation-warning">
+          <strong>Importante</strong>
+          <p id="explanation-warning"></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const sections = {
+        formulas: {
+          step: "Módulo 01",
+          title: "Fórmulas de izaje",
+          description: "Herramientas de apoyo para la evaluación operacional de maniobras de izaje.",
+          card: "Ángulo y altura de pluma",
+          detail: "Determine la geometría de trabajo a partir de la longitud de pluma y el radio de operación.",
+          fields: ["Longitud de pluma (m)", "Radio de operación (m)"],
+          result: "Ingrese valores"
+        },
+        weight: {
+          step: "Módulo 02",
+          title: "Cálculo de peso",
+          description: "Seleccione un material y la geometría para estimar el peso de la carga.",
+          card: "Tubo",
+          detail: "Configure cada medida con su unidad correspondiente.",
+          fields: ["Diámetro", "Longitud"],
+          result: "Peso: 0,00 kg"
+        },
+        tables: {
+          step: "Módulo 03",
+          title: "Tablas de carga",
+          description: "Consulte la tabla técnica correspondiente a la serie y submodelo de pluma.",
+          card: "Selección de equipo",
+          detail: "La imagen técnica se mostrará después de seleccionar ambos campos.",
+          fields: ["Serie principal", "Submodelo"],
+          result: "Sin tabla seleccionada"
+        },
+        docs: {
+          step: "Módulo 04",
+          title: "Documentación",
+          description: "Verifique los antecedentes requeridos antes de iniciar la maniobra.",
+          card: "Documentación previa a maniobra",
+          detail: "0 de 14 antecedentes verificados.",
+          fields: ["Procedimiento de trabajo", "QRA (Matriz de riesgos)"],
+          result: "Avance: 0%"
+        }
+      };
+
+      const content = document.querySelector("#content");
+      const formulas = [
+        {
+          id: "boom",
+          title: "Ángulo y altura de pluma",
+          detail: "Determine la geometría de trabajo a partir de la longitud de pluma y el radio de operación.",
+          fields: ["Longitud de pluma (m)", "Radio de operación (m)"],
+          result: "Ingrese valores",
+          steps: [
+            "Verifique que la longitud de la pluma (L) sea mayor que el radio de operación (R).",
+            "Calcule el ángulo aplicando: ángulo = acos(R / L).",
+            "Calcule la altura con Pitágoras: altura = √(L² - R²)."
+          ],
+          explanationResult: "Entrega el ángulo de la pluma en grados y la altura de su punta en metros.",
+          warning: "La altura obtenida es geométrica y no considera la altura de montaje, deformaciones, accesorios ni condiciones particulares del equipo."
+        },
+        {
+          id: "capacity",
+          title: "Capacidad de trabajo",
+          detail: "Calcule el porcentaje de utilización de la grúa respecto del peso de la carga.",
+          fields: ["Peso de carga", "Capacidad de grúa"],
+          result: "Ingrese valores",
+          steps: [
+            "Utilice el peso de la carga y la capacidad de la grúa en la misma unidad.",
+            "Divida el peso de la carga por la capacidad de la grúa.",
+            "Multiplique el resultado por 100: utilización = (peso / capacidad) × 100."
+          ],
+          explanationResult: "Entrega el porcentaje de utilización. La aplicación destaca en rojo los valores iguales o superiores al 75%.",
+          warning: "La capacidad ingresada debe corresponder al radio, longitud de pluma y configuración real indicados en la tabla de carga del fabricante."
+        },
+        {
+          id: "slings",
+          title: "Ángulo de trabajo y tensión de eslingas",
+          detail: "Determine el ángulo de trabajo y la tensión aplicada a cada eslinga.",
+          fields: ["Peso total", "Número de eslingas"],
+          result: "Ingrese valores",
+          steps: [
+            "Verifique que la longitud de la eslinga (L) sea mayor o igual que la altura entre el gancho y la carga (H).",
+            "Calcule el ángulo aplicando: ángulo = asin(H / L).",
+            "Calcule la tensión por eslinga: tensión = (peso / número de eslingas) × (L / H)."
+          ],
+          explanationResult: "Entrega el ángulo en grados y la tensión teórica soportada por cada eslinga.",
+          warning: "El cálculo supone reparto uniforme. El centro de gravedad y la cantidad efectiva de ramales portantes pueden aumentar la tensión."
+        },
+        {
+          id: "gravity",
+          title: "Centro de gravedad",
+          detail: "Encuentre el punto donde se concentra el peso de la carga para ubicar correctamente el aparejo y el gancho.",
+          fields: ["Peso", "Distancia al punto cero (m)"],
+          result: "Ingrese valores",
+          steps: [
+            "Separe la carga en piezas e identifique el peso de cada una.",
+            "Defina un punto cero desde donde medirá todas las distancias.",
+            "Mida la distancia desde el punto cero hasta el centro de cada pieza. Use siempre la misma unidad.",
+            "Calcule el momento de cada pieza: momento = peso × distancia.",
+            "Sume los momentos y divida el resultado por el peso total: CG = suma de momentos / peso total.",
+            "Ubique el gancho sobre el centro de gravedad y haga una prueba de levante a pocos centímetros."
+          ],
+          explanationResult: "Entrega el peso total y la distancia del centro de gravedad respecto del punto cero.",
+          warning: "Si la carga se inclina durante la prueba, bájela y corrija el aparejo. No realice ajustes con la carga suspendida."
+        }
+      ];
+      const materialDensities = {
+        PVC: 1400,
+        HDPE: 950,
+        "Hormigón": 2400,
+        Cobre: 8960,
+        "Acero carbono": 7850,
+        "Acero inox": 8000,
+        Hierro: 7860,
+        Plomo: 11340
+      };
+      const documentationItems = [
+        "Procedimiento de trabajo",
+        "Difusión de procedimiento",
+        "Evaluación de procedimiento",
+        "QRA (Matriz de riesgos)",
+        "Difusión de QRA",
+        "Respaldo de GCOM",
+        "Permisos aplicables",
+        "ART",
+        "Cartillas controles críticos",
+        "Checklists aplicables",
+        "Plan de emergencia",
+        "Plan tránsito del área",
+        "Certificaciones",
+        "Documentos del camión"
+      ];
+      const loadTableImages = {
+        "F660RA.2.25": "Captura de pantalla 2026-07-23 153510.png",
+        "F660RA.2.26": "Captura de pantalla 2026-07-23 153610.png",
+        "F660RA.2.27": "Captura de pantalla 2026-07-23 153703.png",
+        "F660RA.2.28": "Captura de pantalla 2026-07-23 153731.png"
+      };
+      let openFormula = null;
+      const explanationOverlay = document.querySelector("#explanation-overlay");
+      const explanationClose = document.querySelector("#explanation-close");
+
+      function closeExplanation() {
+        explanationOverlay.hidden = true;
+      }
+
+      function openExplanation(formulaId) {
+        const formula = formulas.find((item) => item.id === formulaId);
+        if (!formula) return;
+        document.querySelector("#explanation-title").textContent = formula.title;
+        document.querySelector("#explanation-purpose").textContent = formula.detail;
+        document.querySelector("#explanation-steps").innerHTML = formula.steps.map((step) => `<li>${step}</li>`).join("");
+        document.querySelector("#explanation-result").textContent = formula.explanationResult;
+        document.querySelector("#explanation-warning").textContent = formula.warning;
+        explanationOverlay.hidden = false;
+        explanationClose.focus();
+      }
+
+      function renderFormulaItem(formula) {
+        const isOpen = openFormula === formula.id;
+        return `
+          <section class="formula-item ${isOpen ? "open" : ""}">
+            <div class="formula-header">
+              <button
+                class="formula-toggle"
+                type="button"
+                data-formula="${formula.id}"
+                aria-expanded="${isOpen}"
+                aria-controls="${formula.id}-body"
+              >
+                <span>${formula.title}</span>
+                <strong>${isOpen ? "Cerrar" : "Abrir"}</strong>
+              </button>
+              <button
+                class="formula-explain"
+                type="button"
+                data-explanation="${formula.id}"
+                aria-label="Ver explicación de ${formula.title}"
+              >Explicación</button>
+            </div>
+            ${isOpen ? `
+              <div class="formula-body" id="${formula.id}-body">
+                <p>${formula.detail}</p>
+                <div class="fields">
+                  ${formula.fields.map((field) => `<label>${field}<input type="text" placeholder="Ingrese valor"></label>`).join("")}
+                </div>
+                <div class="result"><span>Resultado</span><strong>${formula.result}</strong></div>
+              </div>
+            ` : ""}
+          </section>
+        `;
+      }
+
+      function sectionHeading(step, title, description) {
+        return `
+          <div class="section-heading">
+            <span>${step}</span>
+            <h1>${title}</h1>
+            <p>${description}</p>
+          </div>
+        `;
+      }
+
+      function renderMeasureField(label, field, defaultUnit) {
+        return `
+          <div class="measure-preview">
+            <label>${label}<input type="number" inputmode="decimal" min="0" data-measure="${field}" placeholder="Ingrese valor"></label>
+            <div class="unit-switch" role="group" aria-label="Unidad ${label}">
+              <button class="${defaultUnit === "cm" ? "active" : ""}" type="button" data-unit="cm">cm</button>
+              <button class="${defaultUnit === "m" ? "active" : ""}" type="button" data-unit="m">m</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderWeightCalculator(title, type, fields) {
+        return `
+          <section class="module-card weight-preview-card" data-calculator="${type}">
+            <div class="card-title">${title}</div>
+            <div class="weight-fields-preview">
+              ${fields.map((field) => renderMeasureField(field.label, field.key, field.unit)).join("")}
+            </div>
+            ${type === "emptyTube" ? '<div class="weight-alert">El diámetro debe ser mayor que el doble del espesor.</div>' : ""}
+            <div class="weight-output"><span>Peso</span><strong data-weight>Ingrese valores</strong></div>
+          </section>
+        `;
+      }
+
+      function renderWeightModule() {
+        const materialOptions = Object.entries(materialDensities)
+          .map(([name, density]) => `<option value="${name}">${name} - ${density} kg/m³</option>`)
+          .join("");
+
+        return `
+          ${sectionHeading("Cálculo de peso", "Material y geometría", "Seleccione material e ingrese cada dimensión con su unidad correspondiente.")}
+          <div class="module-stack">
+            <section class="module-card">
+              <label>Material<select id="preview-material">${materialOptions}</select></label>
+            </section>
+            ${renderWeightCalculator("Tubo", "solidTube", [
+              { label: "Diámetro", key: "diameter", unit: "cm" },
+              { label: "Longitud", key: "length", unit: "m" }
+            ])}
+            ${renderWeightCalculator("Tubo vacío", "emptyTube", [
+              { label: "Diámetro", key: "diameter", unit: "cm" },
+              { label: "Espesor", key: "thickness", unit: "cm" },
+              { label: "Longitud", key: "length", unit: "m" }
+            ])}
+            ${renderWeightCalculator("Cuadrado", "square", [
+              { label: "Base", key: "base", unit: "cm" },
+              { label: "Altura", key: "height", unit: "cm" },
+              { label: "Longitud", key: "length", unit: "m" }
+            ])}
+          </div>
+        `;
+      }
+
+      function renderTablesModule() {
+        return `
+          ${sectionHeading("Tablas de carga", "Serie y submodelo", "Seleccione la serie principal de pluma y el submodelo para consultar la tabla asociada.")}
+          <section class="module-card">
+            <div class="card-title">Tablas de carga</div>
+            <p>La imagen técnica se mostrará después de seleccionar ambos campos.</p>
+            <div class="table-selectors">
+              <label>Serie principal de pluma
+                <select id="preview-series">
+                  <option value="">Seleccione serie</option>
+                  <option value="F660">F660</option>
+                </select>
+              </label>
+              <label>Submodelo
+                <select id="preview-submodel" disabled>
+                  <option value="">Seleccione submodelo</option>
+                </select>
+              </label>
+            </div>
+            <div id="preview-table-output" class="table-empty">Seleccione una serie y un submodelo para visualizar la tabla de carga.</div>
+          </section>
+        `;
+      }
+
+      function renderDocumentationModule() {
+        return `
+          <section class="module-card">
+            <div class="checklist-head-preview">
+              <div>
+                <div class="card-title">Documentación previa a maniobra</div>
+                <p>Verifique los antecedentes obligatorios antes de iniciar la maniobra de izaje.</p>
+              </div>
+              <div class="checklist-progress-preview">
+                <strong id="preview-checklist-count">0/14</strong>
+                <span id="preview-checklist-percent">0%</span>
+              </div>
+            </div>
+            <div class="checklist-preview">
+              ${documentationItems.map((item, index) => `
+                <label class="checklist-row-preview">
+                  <input type="checkbox" data-checklist>
+                  <small>${String(index + 1).padStart(2, "0")}</small>
+                  <span>${item}</span>
+                </label>
+              `).join("")}
+            </div>
+            <button class="checklist-clear-preview" type="button" data-clear-checklist>Limpiar checklist</button>
+          </section>
+        `;
+      }
+
+      function toMeters(value, unit) {
+        const numericValue = Number(value);
+        if (!Number.isFinite(numericValue) || numericValue <= 0) return 0;
+        return unit === "cm" ? numericValue / 100 : numericValue;
+      }
+
+      function selectedUnit(input) {
+        return input.closest(".measure-preview").querySelector(".unit-switch button.active").dataset.unit;
+      }
+
+      function measure(card, field) {
+        const input = card.querySelector(`[data-measure="${field}"]`);
+        return input ? toMeters(input.value, selectedUnit(input)) : 0;
+      }
+
+      function formatWeight(weight) {
+        return weight > 0
+          ? `${weight.toLocaleString("es-CL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`
+          : "Ingrese valores";
+      }
+
+      function updateWeights() {
+        const material = document.querySelector("#preview-material");
+        if (!material) return;
+        const density = materialDensities[material.value] || 0;
+
+        document.querySelectorAll(".weight-preview-card").forEach((card) => {
+          const type = card.dataset.calculator;
+          let volume = 0;
+          let invalid = false;
+
+          if (type === "solidTube") {
+            const diameter = measure(card, "diameter");
+            const length = measure(card, "length");
+            volume = diameter > 0 && length > 0 ? Math.PI * (diameter / 2) ** 2 * length : 0;
+          }
+
+          if (type === "emptyTube") {
+            const diameter = measure(card, "diameter");
+            const thickness = measure(card, "thickness");
+            const length = measure(card, "length");
+            const outerRadius = diameter / 2;
+            const innerRadius = outerRadius - thickness;
+            invalid = outerRadius > 0 && thickness > 0 && innerRadius <= 0;
+            volume = innerRadius > 0 && length > 0 ? Math.PI * length * (outerRadius ** 2 - innerRadius ** 2) : 0;
+            card.querySelector(".weight-alert").style.display = invalid ? "block" : "none";
+          }
+
+          if (type === "square") {
+            const base = measure(card, "base");
+            const height = measure(card, "height");
+            const length = measure(card, "length");
+            volume = base > 0 && height > 0 && length > 0 ? base * height * length : 0;
+          }
+
+          card.querySelector("[data-weight]").textContent = invalid ? "Revise dimensiones" : formatWeight(volume * density);
+        });
+      }
+
+      function updateChecklist() {
+        const checkboxes = [...content.querySelectorAll("[data-checklist]")];
+        if (!checkboxes.length) return;
+        const completed = checkboxes.filter((checkbox) => checkbox.checked).length;
+        checkboxes.forEach((checkbox) => checkbox.closest(".checklist-row-preview").classList.toggle("checked", checkbox.checked));
+        content.querySelector("#preview-checklist-count").textContent = `${completed}/${checkboxes.length}`;
+        content.querySelector("#preview-checklist-percent").textContent = `${Math.round((completed / checkboxes.length) * 100)}%`;
+      }
+
+      function updateLoadTable() {
+        const series = content.querySelector("#preview-series");
+        const submodel = content.querySelector("#preview-submodel");
+        const output = content.querySelector("#preview-table-output");
+        if (!series || !submodel || !output) return;
+
+        if (!series.value) {
+          submodel.disabled = true;
+          submodel.innerHTML = '<option value="">Seleccione submodelo</option>';
+          output.className = "table-empty";
+          output.textContent = "Seleccione una serie y un submodelo para visualizar la tabla de carga.";
+          return;
+        }
+
+        if (submodel.options.length === 1) {
+          submodel.disabled = false;
+          submodel.innerHTML = `<option value="">Seleccione submodelo</option>${Object.keys(loadTableImages).map((model) => `<option value="${model}">${model}</option>`).join("")}`;
+        }
+
+        if (!submodel.value) {
+          output.className = "table-empty";
+          output.textContent = "Seleccione un submodelo para visualizar la tabla de carga.";
+          return;
+        }
+
+        output.className = "table-preview";
+        output.innerHTML = `
+          <img src="${loadTableImages[submodel.value]}" alt="Tabla de carga ${submodel.value}">
+          <div><strong>${submodel.value}</strong><span>Categoría F660</span></div>
+        `;
+      }
+
+      function render(sectionId) {
+        const section = sections[sectionId];
+        if (sectionId === "formulas") {
+          content.innerHTML = `${sectionHeading(section.step, section.title, section.description)}<div class="formula-list">${formulas.map(renderFormulaItem).join("")}</div>`;
+          return;
+        }
+        if (sectionId === "weight") {
+          content.innerHTML = renderWeightModule();
+          return;
+        }
+        if (sectionId === "tables") {
+          content.innerHTML = renderTablesModule();
+          return;
+        }
+        content.innerHTML = renderDocumentationModule();
+      }
+
+      content.addEventListener("click", (event) => {
+        const unitButton = event.target.closest(".unit-switch button");
+        if (unitButton) {
+          unitButton.closest(".unit-switch").querySelectorAll("button").forEach((button) => button.classList.toggle("active", button === unitButton));
+          updateWeights();
+          return;
+        }
+
+        const clearChecklistButton = event.target.closest("[data-clear-checklist]");
+        if (clearChecklistButton) {
+          content.querySelectorAll("[data-checklist]").forEach((checkbox) => {
+            checkbox.checked = false;
+          });
+          updateChecklist();
+          return;
+        }
+
+        const explanationButton = event.target.closest(".formula-explain");
+        if (explanationButton) {
+          openExplanation(explanationButton.dataset.explanation);
+          return;
+        }
+
+        const button = event.target.closest(".formula-toggle");
+        if (!button) return;
+        openFormula = openFormula === button.dataset.formula ? null : button.dataset.formula;
+        render("formulas");
+      });
+
+      content.addEventListener("input", (event) => {
+        if (event.target.matches("[data-measure]")) updateWeights();
+      });
+
+      content.addEventListener("change", (event) => {
+        if (event.target.id === "preview-material") updateWeights();
+        if (event.target.matches("[data-checklist]")) updateChecklist();
+        if (event.target.id === "preview-series" || event.target.id === "preview-submodel") updateLoadTable();
+      });
+
+      explanationClose.addEventListener("click", closeExplanation);
+      explanationOverlay.addEventListener("click", (event) => {
+        if (event.target === explanationOverlay) closeExplanation();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !explanationOverlay.hidden) closeExplanation();
+      });
+
+      document.querySelectorAll(".nav-item").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".nav-item").forEach((item) => {
+            const active = item === button;
+            item.classList.toggle("active", active);
+            item.setAttribute("aria-pressed", String(active));
+            item.querySelector(".state").textContent = active ? "Actual" : "Abrir";
+          });
+          render(button.dataset.section);
+        });
+      });
+
+      document.querySelector("#theme").addEventListener("click", () => {
+        const root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+      });
+
+      render("formulas");
+    </script>
+  </body>
+</html>

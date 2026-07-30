@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App - Opciones UI</title>
+    <style>
+      :root {
+        --navy: #061744;
+        --navy-2: #08256f;
+        --blue: #0057e7;
+        --blue-2: #2f7cff;
+        --sky: #d8e8fb;
+        --surface: #e9f2fb;
+        --surface-2: #dce8f5;
+        --line: #8ea8ca;
+        --text: #061744;
+        --muted: #526b99;
+        --green: #18784f;
+        --amber: #a66a00;
+        --red: #b3261e;
+        --shadow: 0 18px 44px rgba(8, 37, 111, 0.22);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 12% 10%, rgba(0, 87, 231, 0.16), transparent 28%),
+          radial-gradient(circle at 88% 16%, rgba(47, 124, 255, 0.16), transparent 24%),
+          linear-gradient(135deg, #cdd9e8, #e4eef8 42%, #c7d5e8);
+        color: var(--text);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .page {
+        width: min(1320px, 100%);
+        margin: 0 auto;
+        padding: 34px 22px 46px;
+      }
+
+      .intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 26px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid rgba(0, 87, 231, 0.25);
+        border-radius: 999px;
+        background: rgba(232, 242, 251, 0.72);
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 760px;
+        margin: 14px 0 0;
+        font-size: clamp(32px, 5vw, 58px);
+        line-height: 0.98;
+        letter-spacing: -0.035em;
+      }
+
+      .intro p {
+        max-width: 390px;
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .option-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 24px;
+      }
+
+      .option {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .option-header {
+        min-height: 132px;
+        padding: 20px;
+        border: 1.5px solid var(--line);
+        border-radius: 24px;
+        background: rgba(233, 242, 251, 0.86);
+        box-shadow: var(--shadow);
+      }
+
+      .option-header strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--navy);
+        font-size: 20px;
+        letter-spacing: -0.01em;
+      }
+
+      .option-header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .phone {
+        width: min(100%, 365px);
+        min-height: 720px;
+        margin: 0 auto;
+        overflow: hidden;
+        border: 10px solid rgba(6, 23, 68, 0.9);
+        border-radius: 40px;
+        background: var(--surface-2);
+        box-shadow: var(--shadow);
+      }
+
+      .screen {
+        min-height: 700px;
+        padding: 18px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .logo-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 900;
+      }
+
+      .brand b {
+        display: block;
+        color: var(--navy);
+        font-size: 15px;
+        line-height: 1.05;
+      }
+
+      .brand span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 30px;
+        padding: 6px 10px;
+        border: 1px solid rgba(6, 23, 68, 0.1);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.52);
+        color: var(--navy);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .card {
+        border: 1.5px solid var(--line);
+        border-radius: 22px;
+        background: var(--surface);
+        box-shadow: 0 12px 28px rgba(8, 37, 111, 0.14);
+      }
+
+      .primary {
+        padding: 22px;
+        background: linear-gradient(135deg, var(--navy-2), var(--blue));
+        color: #fff;
+      }
+
+      .primary h2 {
+        margin: 0 0 8px;
+        font-size: 25px;
+        line-height: 1.05;
+        letter-spacing: -0.025em;
+      }
+
+      .primary p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .metric {
+        padding: 10px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.13);
+      }
+
+      .metric b {
+        display: block;
+        color: #fff;
+        font-size: 18px;
+      }
+
+      .metric span {
+        color: rgba(255, 255, 255, 0.72);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .module-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .module {
+        min-height: 116px;
+        padding: 14px;
+      }
+
+      .module-code {
+        display: inline-flex;
+        width: 36px;
+        height: 36px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 14px;
+        border-radius: 12px;
+        background: var(--blue);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .module b {
+        display: block;
+        margin-bottom: 5px;
+        color: var(--navy);
+        font-size: 14px;
+      }
+
+      .module span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.35;
+      }
+
+      .alert-list {
+        display: grid;
+        gap: 9px;
+        margin-top: 14px;
+      }
+
+      .alert {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+      }
+
+      .alert b {
+        font-size: 12px;
+      }
+
+      .alert span {
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .status-ok {
+        color: var(--green);
+      }
+
+      .status-warn {
+        color: var(--amber);
+      }
+
+      .status-danger {
+        color: var(--red);
+      }
+
+      .nav {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-top: 14px;
+        padding: 8px;
+        border: 1.5px solid var(--line);
+        border-radius: 22px;
+        background: rgba(233, 242, 251, 0.78);
+      }
+
+      .nav button {
+        border: 0;
+        border-radius: 15px;
+        background: transparent;
+        color: var(--muted);
+        min-height: 44px;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .nav button.active {
+        background: var(--blue);
+        color: #fff;
+      }
+
+      .executive .screen {
+        background: #d9e5f3;
+      }
+
+      .executive .summary {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+
+      .summary-card {
+        padding: 14px;
+      }
+
+      .summary-card b {
+        display: block;
+        color: var(--navy);
+        font-size: 22px;
+      }
+
+      .summary-card span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 750;
+      }
+
+      .wide-card {
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .wide-card h3 {
+        margin: 0 0 12px;
+        color: var(--navy);
+        font-size: 15px;
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 11px 0;
+        border-top: 1px solid rgba(142, 168, 202, 0.65);
+      }
+
+      .row:first-of-type {
+        border-top: 0;
+      }
+
+      .row b {
+        display: block;
+        font-size: 12px;
+      }
+
+      .row small {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .compact .screen {
+        background:
+          linear-gradient(180deg, var(--navy-2) 0 164px, #d5e2f0 164px);
+      }
+
+      .compact .topbar .brand b,
+      .compact .topbar .brand span {
+        color: #fff;
+      }
+
+      .compact .pill {
+        background: rgba(255, 255, 255, 0.18);
+        color: #fff;
+        border-color: rgba(255, 255, 255, 0.28);
+      }
+
+      .quick-card {
+        padding: 18px;
+        margin-top: 18px;
+      }
+
+      .quick-card h2 {
+        margin: 0 0 5px;
+        color: var(--navy);
+        font-size: 22px;
+      }
+
+      .quick-card p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .field-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .field input {
+        width: 100%;
+        min-height: 44px;
+        border: 1.5px solid var(--line);
+        border-radius: 14px;
+        background: #f3f8fd;
+        color: var(--navy);
+        padding: 0 12px;
+        font-weight: 850;
+      }
+
+      .main-button {
+        width: 100%;
+        min-height: 50px;
+        margin-top: 14px;
+        border: 0;
+        border-radius: 16px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 900;
+      }
+
+      .result-band {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 16px;
+        background: #cfe1f6;
+        color: var(--navy);
+      }
+
+      .result-band b {
+        font-size: 21px;
+      }
+
+      .comparison {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .comparison article {
+        padding: 18px;
+        border: 1.5px solid var(--line);
+        border-radius: 22px;
+        background: rgba(233, 242, 251, 0.86);
+      }
+
+      .comparison h2 {
+        margin: 0 0 10px;
+        font-size: 16px;
+      }
+
+      .comparison p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 1120px) {
+        .option-grid,
+        .comparison {
+          grid-template-columns: 1fr;
+        }
+
+        .intro {
+          grid-template-columns: 1fr;
+        }
+
+        .intro p {
+          max-width: 720px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="intro">
+        <div>
+          <span class="eyebrow">Mantos Group · Propuestas UI</span>
+          <h1>Opciones visuales para mejorar Mantos App</h1>
+        </div>
+        <p>
+          Tres direcciones minimalistas y empresariales para decidir el siguiente rediseño. Todas mantienen la paleta azul corporativa y priorizan lectura móvil en terreno.
+        </p>
+      </section>
+
+      <section class="option-grid" aria-label="Opciones de diseño">
+        <article class="option">
+          <div class="option-header">
+            <strong>Opción 1 · Alto Contraste Operativo</strong>
+            <p>Mejor para uso bajo sol, operadores en terreno y lectura rápida de estados críticos.</p>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="topbar">
+                <div class="brand">
+                  <div class="logo-mark">MG</div>
+                  <div>
+                    <b>Mantos App</b>
+                    <span>Operador · Terreno</span>
+                  </div>
+                </div>
+                <span class="pill">En línea</span>
+              </div>
+
+              <section class="card primary">
+                <h2>Operación activa</h2>
+                <p>Registro de tasa de riego y documentación disponible para sincronización.</p>
+                <div class="metrics">
+                  <div class="metric"><b>3</b><span>Pendientes</span></div>
+                  <div class="metric"><b>36 s</b><span>Cronómetro</span></div>
+                  <div class="metric"><b>12.4</b><span>L/h</span></div>
+                </div>
+              </section>
+
+              <section class="module-grid">
+                <div class="card module"><span class="module-code">TR</span><b>Tasa de Riego</b><span>Medición rápida y registro local.</span></div>
+                <div class="card module"><span class="module-code">CD</span><b>Conducción</b><span>Documentación diaria con respaldo.</span></div>
+                <div class="card module"><span class="module-code">IZ</span><b>Izajes</b><span>Cálculos técnicos y checklist.</span></div>
+                <div class="card module"><span class="module-code">GL</span><b>Glosario</b><span>Consulta y prueba de términos.</span></div>
+              </section>
+
+              <section class="alert-list">
+                <div class="card alert"><b>Sincronización</b><span class="status-warn">2 archivos</span></div>
+                <div class="card alert"><b>Documentos de conducción</b><span class="status-ok">Vigente</span></div>
+                <div class="card alert"><b>Capacidad de trabajo</b><span class="status-danger">78%</span></div>
+              </section>
+
+              <nav class="nav">
+                <button class="active">Inicio</button>
+                <button>Medir</button>
+                <button>Historial</button>
+                <button>Admin</button>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="option executive">
+          <div class="option-header">
+            <strong>Opción 2 · Centro Ejecutivo</strong>
+            <p>Mejor para administración, supervisión e historial con lectura clara por categorías.</p>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="topbar">
+                <div class="brand">
+                  <div class="logo-mark">MG</div>
+                  <div>
+                    <b>Panel Mantos</b>
+                    <span>Administrador</span>
+                  </div>
+                </div>
+                <span class="pill">Turno A</span>
+              </div>
+
+              <section class="summary">
+                <div class="card summary-card"><b>128</b><span>Mediciones</span></div>
+                <div class="card summary-card"><b>42</b><span>Documentos</span></div>
+                <div class="card summary-card"><b>7</b><span>Pendientes</span></div>
+                <div class="card summary-card"><b>4</b><span>Módulos</span></div>
+              </section>
+
+              <section class="card wide-card">
+                <h3>Estado por categoría</h3>
+                <div class="row"><div><b>Tasa de Riego</b><small>Último registro hace 12 min</small></div><span class="status-ok">Normal</span></div>
+                <div class="row"><div><b>Conducción</b><small>Imagen pendiente de revisión</small></div><span class="status-warn">Atención</span></div>
+                <div class="row"><div><b>Izajes</b><small>Checklist completo</small></div><span class="status-ok">Validado</span></div>
+              </section>
+
+              <section class="card wide-card">
+                <h3>Actividad reciente</h3>
+                <div class="row"><div><b>Operador Ian</b><small>Guardó medición de riego</small></div><span>09:18</span></div>
+                <div class="row"><div><b>Conducción</b><small>Documento eliminado desde app</small></div><span>08:52</span></div>
+                <div class="row"><div><b>Izajes</b><small>Cálculo de pluma generado</small></div><span>08:31</span></div>
+              </section>
+
+              <nav class="nav">
+                <button class="active">Panel</button>
+                <button>Datos</button>
+                <button>Reportes</button>
+                <button>Más</button>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="option compact">
+          <div class="option-header">
+            <strong>Opción 3 · Flujo Compacto por Tarjetas</strong>
+            <p>Mejor para registrar datos rápido: formularios cortos, menos pantalla y acciones persistentes.</p>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="topbar">
+                <div class="brand">
+                  <div class="logo-mark">MG</div>
+                  <div>
+                    <b>Izajes</b>
+                    <span>Cálculo operativo</span>
+                  </div>
+                </div>
+                <span class="pill">Offline</span>
+              </div>
+
+              <section class="card quick-card">
+                <h2>Capacidad de trabajo</h2>
+                <p>Registro rápido para evaluar condición de maniobra.</p>
+                <div class="field-grid">
+                  <div class="field">
+                    <label>Peso carga</label>
+                    <input value="12.5 t" aria-label="Peso carga" />
+                  </div>
+                  <div class="field">
+                    <label>Cap. grúa</label>
+                    <input value="20 t" aria-label="Capacidad grúa" />
+                  </div>
+                </div>
+                <div class="result-band"><span>Resultado</span><b>62.5%</b></div>
+                <button class="main-button">Guardar cálculo</button>
+              </section>
+
+              <section class="card quick-card">
+                <h2>Tensión de eslingas</h2>
+                <p>Entrada directa con unidades visibles por campo.</p>
+                <div class="field-grid">
+                  <div class="field"><label>Peso</label><input value="8.0 t" aria-label="Peso" /></div>
+                  <div class="field"><label>N eslingas</label><input value="4" aria-label="Número de eslingas" /></div>
+                  <div class="field"><label>Longitud</label><input value="3.2 m" aria-label="Longitud" /></div>
+                  <div class="field"><label>Altura</label><input value="2.4 m" aria-label="Altura" /></div>
+                </div>
+                <div class="result-band"><span>Tensión</span><b>2.67 t</b></div>
+              </section>
+
+              <nav class="nav">
+                <button>Riego</button>
+                <button>Docs</button>
+                <button class="active">Izajes</button>
+                <button>Historial</button>
+              </nav>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="comparison" aria-label="Comparación de opciones">
+        <article>
+          <h2>Recomendación práctica</h2>
+          <p>Usaría la opción 1 como base general porque la app se utiliza en terreno y necesita máxima legibilidad bajo sol. Es la opción con menor riesgo operacional.</p>
+        </article>
+        <article>
+          <h2>Elemento a combinar</h2>
+          <p>Del Centro Ejecutivo conviene tomar el resumen por categorías para el panel administrador, manteniéndolo separado del flujo normal del operador.</p>
+        </article>
+        <article>
+          <h2>Aplicación en Izajes</h2>
+          <p>Para Izajes conviene tomar la opción 3: tarjetas de cálculo compactas, campos con unidades visibles y resultado destacado sin saturar la pantalla.</p>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

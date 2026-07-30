@@ -9,6 +9,29 @@ const corsHeaders = {
 const DOCUMENT_BUCKET = 'conduction-documents';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function getAllowedAdminEmails() {
+  return (Deno.env.get('ADMIN_EMAILS') || 'admin@mantos.app')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+async function assertAdminRequest(req: Request, supabase: ReturnType<typeof createClient>) {
+  const authHeader = req.headers.get('Authorization') || '';
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+  if (!token) return { ok: false, error: 'Sesion administrativa requerida.' };
+
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user?.email) return { ok: false, error: 'Sesion administrativa invalida.' };
+
+  const email = data.user.email.toLowerCase();
+  if (!getAllowedAdminEmails().includes(email)) {
+    return { ok: false, error: 'No autorizado para ejecutar borrados administrativos.' };
+  }
+
+  return { ok: true, email };
+}
+
 function jsonResponse(body: Record<string, unknown>, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -40,10 +63,10 @@ Deno.serve(async (req) => {
   const id = body.id || '';
   const deleteToken = body.deleteToken || '';
 
-  if (!['document', 'measurement'].includes(kind || '')) {
+  if (!['document', 'measurement', 'measurement_bulk'].includes(kind || '')) {
     return jsonResponse({ ok: false, error: 'Tipo de registro invalido.' }, 400);
   }
-  if (!UUID_PATTERN.test(id) || deleteToken.length < 12) {
+  if (kind !== 'measurement_bulk' && (!UUID_PATTERN.test(id) || deleteToken.length < 12)) {
     return jsonResponse({ ok: false, error: 'Identificador de eliminacion invalido.' }, 400);
   }
 
@@ -53,6 +76,20 @@ Deno.serve(async (req) => {
       persistSession: false,
     },
   });
+
+  if (kind === 'measurement_bulk') {
+    const admin = await assertAdminRequest(req, supabase);
+    if (!admin.ok) return jsonResponse({ ok: false, error: admin.error }, 403);
+
+    const deleted = await supabase
+      .from('irrigation_measurements')
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+      .select('id');
+
+    if (deleted.error) return jsonResponse({ ok: false, error: deleted.error.message }, 500);
+    return jsonResponse({ ok: true, deletedCount: deleted.data?.length || 0 });
+  }
 
   if (kind === 'measurement') {
     const { data, error } = await supabase

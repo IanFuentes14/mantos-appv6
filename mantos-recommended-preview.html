@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mantos App - UI Recomendada</title>
+    <style>
+      :root {
+        --navy: #061744;
+        --blue: #0057e7;
+        --blue-2: #2f7cff;
+        --pale: #d8e8fb;
+        --surface: #eaf3fc;
+        --bg: #b8c8db;
+        --line: #6f89aa;
+        --text: #031235;
+        --muted: #415c86;
+        --green: #18784f;
+        --amber: #9b6400;
+        --shadow: 0 16px 34px rgba(6, 23, 68, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: linear-gradient(180deg, #cbd8e8, #aebfd4);
+        color: var(--text);
+      }
+
+      .page {
+        width: min(1240px, 100%);
+        margin: 0 auto;
+        padding: 34px 22px 46px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 420px);
+        gap: 24px;
+        align-items: end;
+        margin-bottom: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        padding: 8px 12px;
+        border: 1px solid rgba(0, 87, 231, 0.28);
+        border-radius: 999px;
+        background: var(--pale);
+        color: var(--blue);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 720px;
+        margin: 14px 0 0;
+        font-size: clamp(32px, 5vw, 56px);
+        line-height: 1;
+      }
+
+      .hero p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .screens {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+      }
+
+      .phone {
+        min-height: 720px;
+        overflow: hidden;
+        border: 10px solid rgba(6, 23, 68, 0.92);
+        border-radius: 40px;
+        background: linear-gradient(180deg, #d4e0ed 0%, var(--bg) 100%);
+        box-shadow: var(--shadow);
+      }
+
+      .screen {
+        padding: 16px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, var(--navy), #08256f);
+        color: #fff;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .brand img {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        object-fit: cover;
+      }
+
+      .brand b,
+      .brand span {
+        display: block;
+      }
+
+      .brand b {
+        font-size: 15px;
+      }
+
+      .brand span {
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .pill {
+        flex: 0 0 auto;
+        padding: 7px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.24);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.14);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .welcome {
+        padding: 44px 18px 28px;
+        text-align: center;
+      }
+
+      .welcome img {
+        width: 128px;
+        height: 128px;
+        border-radius: 30px;
+        object-fit: cover;
+        box-shadow: var(--shadow);
+      }
+
+      .welcome h2 {
+        margin: 24px 0 8px;
+        color: var(--text);
+        font-size: 30px;
+      }
+
+      .welcome p,
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .button {
+        width: 100%;
+        min-height: 52px;
+        border: 0;
+        border-radius: 17px;
+        background: var(--blue);
+        color: #fff;
+        font-weight: 950;
+        box-shadow: 0 14px 26px rgba(0, 87, 231, 0.3);
+      }
+
+      .button.secondary {
+        margin-top: 12px;
+        border: 1.5px solid var(--line);
+        background: var(--pale);
+        color: var(--navy);
+        box-shadow: none;
+      }
+
+      .summary {
+        margin: 18px 0 14px;
+        overflow: hidden;
+        border-radius: 26px;
+        background: linear-gradient(135deg, var(--navy), var(--blue));
+        box-shadow: var(--shadow);
+        color: #fff;
+      }
+
+      .summary-main {
+        padding: 20px 18px 16px;
+      }
+
+      .summary-main span {
+        color: rgba(255, 255, 255, 0.76);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .summary-main strong {
+        display: block;
+        margin-top: 7px;
+        font-size: 24px;
+      }
+
+      .summary-main p {
+        margin: 6px 0 0;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 13px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1px;
+        background: rgba(255, 255, 255, 0.16);
+      }
+
+      .metrics div {
+        padding: 13px 9px;
+        background: rgba(255, 255, 255, 0.1);
+        text-align: center;
+      }
+
+      .metrics b {
+        display: block;
+        font-size: 20px;
+      }
+
+      .metrics span {
+        display: block;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 10px;
+        font-weight: 850;
+        text-transform: uppercase;
+      }
+
+      .card {
+        padding: 16px;
+        border: 1.5px solid var(--line);
+        border-radius: 23px;
+        margin-bottom: 12px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .module {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 13px;
+        align-items: center;
+        min-height: 102px;
+      }
+
+      .icon {
+        display: grid;
+        width: 54px;
+        height: 54px;
+        place-items: center;
+        border-radius: 18px;
+        background: var(--blue);
+        color: #fff;
+        font-size: 13px;
+        font-weight: 950;
+      }
+
+      .icon.dark {
+        background: var(--navy);
+      }
+
+      .icon.green {
+        background: var(--green);
+      }
+
+      .module strong,
+      .card h3 {
+        display: block;
+        margin: 0;
+        color: var(--text);
+        font-size: 15px;
+      }
+
+      .module small,
+      .card p {
+        display: block;
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .admin-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin: 16px 0 14px;
+      }
+
+      .kpi {
+        min-height: 92px;
+        padding: 14px 10px;
+        text-align: center;
+      }
+
+      .kpi span {
+        display: block;
+        min-height: 28px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .kpi b {
+        color: var(--navy);
+        font-size: 24px;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 8px;
+        border: 1.5px solid var(--line);
+        border-radius: 22px;
+        margin: 16px 0 14px;
+        background: var(--pale);
+      }
+
+      .tabs button {
+        min-height: 48px;
+        border: 0;
+        border-radius: 16px;
+        background: transparent;
+        color: var(--muted);
+        font-weight: 900;
+      }
+
+      .tabs button.active {
+        background: var(--blue);
+        color: #fff;
+      }
+
+      .result {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 16px;
+        background: var(--pale);
+        color: var(--navy);
+      }
+
+      .result span {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+      }
+
+      .result b {
+        display: block;
+        margin-top: 4px;
+        font-size: 24px;
+      }
+
+      .status {
+        color: var(--amber);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .screens {
+          grid-template-columns: 1fr;
+        }
+
+        .phone {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div>
+          <span class="eyebrow">Mantos Group · UI recomendada</span>
+          <h1>Diseño operativo de alto contraste para la APK</h1>
+        </div>
+        <p>
+          Base recomendada: lectura fuerte para terreno, panel administrador ejecutivo y cálculos compactos en Izajes. Mantiene la paleta azul corporativa y evita superficies blancas excesivas.
+        </p>
+      </section>
+
+      <section class="screens">
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Mantos App</b>
+                  <span>Acceso principal</span>
+                </div>
+              </div>
+              <span class="pill">v2</span>
+            </div>
+            <div class="welcome">
+              <img src="public/mantos_group_logo.jpg" alt="" />
+              <h2>Bienvenido</h2>
+              <p>Ingreso diferenciado para administrador u operador, manteniendo soporte offline para terreno.</p>
+            </div>
+            <button class="button">Acceder como administrador</button>
+            <button class="button secondary">Acceder como usuario</button>
+          </div>
+        </article>
+
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Menú principal</b>
+                  <span>Operador · Terreno</span>
+                </div>
+              </div>
+              <span class="pill">En línea</span>
+            </div>
+            <section class="summary">
+              <div class="summary-main">
+                <span>Operación activa</span>
+                <strong>Sistema en línea</strong>
+                <p>3 pendientes por sincronizar</p>
+              </div>
+              <div class="metrics">
+                <div><b>12</b><span>Mediciones</span></div>
+                <div><b>5</b><span>Documentos</span></div>
+                <div><b>18.4</b><span>Última L/h</span></div>
+              </div>
+            </section>
+            <div class="card module">
+              <span class="icon">TR</span>
+              <div><strong>Medición Tasa de Riego</strong><small>Registro, historial y exportación.</small></div>
+              <b>›</b>
+            </div>
+            <div class="card module">
+              <span class="icon dark">IZ</span>
+              <div><strong>Izajes</strong><small>Fórmulas, pesos y documentación previa.</small></div>
+              <b>›</b>
+            </div>
+            <div class="card module">
+              <span class="icon green">GT</span>
+              <div><strong>Glosario de Términos</strong><small>Consulta técnica y modo de prueba.</small></div>
+              <b>›</b>
+            </div>
+            <button class="button">Sincronizar datos pendientes</button>
+          </div>
+        </article>
+
+        <article class="phone">
+          <div class="screen">
+            <div class="topbar">
+              <div class="brand">
+                <img src="public/mantos_group_logo.jpg" alt="Mantos Group" />
+                <div>
+                  <b>Panel administrador</b>
+                  <span>Control operativo</span>
+                </div>
+              </div>
+              <span class="pill">Admin</span>
+            </div>
+            <div class="admin-grid">
+              <div class="card kpi"><span>Mediciones</span><b>128</b></div>
+              <div class="card kpi"><span>Promedio L/h</span><b>16.8</b></div>
+              <div class="card kpi"><span>Documentos</span><b>42</b></div>
+            </div>
+            <div class="tabs">
+              <button class="active">Tasa de riego</button>
+              <button>Conducción</button>
+            </div>
+            <div class="card">
+              <h3>Capacidad de trabajo</h3>
+              <p>Cálculo compacto en Izajes para lectura rápida.</p>
+              <div class="result">
+                <span>Resultado</span>
+                <b>62.5%</b>
+              </div>
+            </div>
+            <div class="card">
+              <h3>Documentación previa</h3>
+              <p>Checklist operacional para maniobras de izaje.</p>
+              <span class="status">12 de 14 verificados</span>
+            </div>
+            <button class="button">Compartir reporte Excel</button>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
