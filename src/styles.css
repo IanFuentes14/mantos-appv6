@@ -4239,3 +4239,79 @@ th {
   background: var(--danger);
   color: #ffffff;
 }
+
+.app-header-tool .header-top {
+  gap: 8px;
+}
+
+.app-header-tool .header-brand-actions {
+  flex: 1 1 auto;
+  gap: 8px;
+}
+
+.app-header-tool .header-brand-actions > .btn-back {
+  display: inline-flex;
+  min-width: 48px;
+  min-height: 48px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-size: 13px;
+  touch-action: manipulation;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.app-header-tool .header-brand-actions > .btn-back svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.app-header-tool .header-brand-actions > .btn-back:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.app-header-tool .header-brand-actions > .btn-back:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 520px) {
+  .app-header-tool .header-top {
+    padding: 8px;
+  }
+
+  .app-header-tool .header-logo {
+    width: 44px;
+    height: 44px;
+  }
+
+  .app-header-tool .header-brand-actions {
+    gap: 6px;
+  }
+
+  .app-header-tool .header-brand-actions > .btn-back {
+    gap: 4px;
+    padding-inline: 7px;
+  }
+
+  .app-header-tool .header-menu-right {
+    flex: 0 1 auto;
+  }
+
+  .app-header-tool .header-menu-actions {
+    gap: 6px;
+  }
+
+  .app-header-tool .logout-label {
+    display: none;
+  }
+}

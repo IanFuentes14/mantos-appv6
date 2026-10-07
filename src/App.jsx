@@ -1043,7 +1043,7 @@ function App() {
     setOperatorName(operatorName);
     setAccessRole('offline');
     setScreen('menu');
-    setMessage('Acceso offline habilitado. Solo estará disponible la medición de tasa de riego.');
+    setMessage('Acceso offline habilitado. Puedes consultar procedimientos locales y registrar mediciones de tasa de riego.');
   }
 
   function openSurvey(survey) {
@@ -1504,6 +1504,20 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLo
       <div className="header-top">
         {isToolHeader ? (
           <div className="header-brand-actions">
+            {onBack && (
+              <button
+                className="btn-back"
+                type="button"
+                onClick={onBack}
+                aria-label="Volver al menú"
+                title="Volver al menú"
+              >
+                <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+                  <path d="m14.5 5-7 7 7 7M8 12h12" />
+                </svg>
+                <span>Menú</span>
+              </button>
+            )}
             <img className="header-logo" src="/mantos_group_logo.jpg" alt="Mantos Group" />
             <button className="user-badge" type="button" onClick={onLogout} title="Cerrar sesión">
               <span className="user-avatar">{initials(operator)}</span>
@@ -1532,32 +1546,27 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLo
           {!isToolHeader && <span className="header-subtitle">{isOnline ? 'Con conexión' : 'Sin conexión'} · {pendingCount} pendiente(s)</span>}
         </div>
       </div>
-      {onBack && (
-        <div className="header-tool-navigation">
-          <button className="btn-back" type="button" onClick={onBack}>Volver al menú</button>
-        </div>
-      )}
     </header>
   );
 }
 
 function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syncUiStatus, measurements, onNavigate, onSync, onTheme, onLogout, theme }) {
-  const isOfflineMeasurementOnly = accessRole === 'offline';
+  const isOfflineOnlyAccess = accessRole === 'offline';
 
   return (
     <section id="menu-screen">
       <Header operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} isMenu />
       <div className="menu-welcome">
         <p>Bienvenido, {operator}. ¿Qué necesitas realizar hoy?</p>
-        <span>{isOfflineMeasurementOnly ? 'En este acceso puedes registrar mediciones de tasa de riego.' : 'Elige una sección para comenzar.'}</span>
+        <span>{isOfflineOnlyAccess ? 'Registra mediciones de tasa de riego o consulta los procedimientos locales.' : 'Elige una sección para comenzar.'}</span>
       </div>
       <div className="menu-list">
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
-        {!isOfflineMeasurementOnly && <MenuCard icon="PR" title="Procedimientos" desc="Consulte procedimientos locales cargados en la aplicación, disponibles sin conexión." procedure onClick={() => onNavigate('procedures')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />}
-        {accessRole === 'admin' && !isOfflineMeasurementOnly && (
+        <MenuCard icon="PR" title="Procedimientos" desc="Consulte procedimientos locales cargados en la aplicación, disponibles sin conexión." procedure onClick={() => onNavigate('procedures')} />
+        {!isOfflineOnlyAccess && <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />}
+        {!isOfflineOnlyAccess && <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />}
+        {!isOfflineOnlyAccess && <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />}
+        {accessRole === 'admin' && !isOfflineOnlyAccess && (
           <MenuCard icon="AD" title="Panel administrador" desc="Revise el historial de tasas de riego y encuestas." onClick={() => onNavigate('admin')} />
         )}
         {syncUiStatus !== 'idle' && (
