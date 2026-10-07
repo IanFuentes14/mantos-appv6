@@ -1,29 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import imageCompression from 'browser-image-compression';
 import { glossaryTerms } from './data/glossary';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
   addQueuedMeasurement,
   addQueuedSurveyEvent,
-  dataUrlToBlob,
-  getQueuedDocuments,
   getQueuedMeasurements,
   getQueuedSurveyEvents,
   getUserDatabaseValidation,
-  saveQueuedDocuments,
   saveQueuedMeasurements,
   saveQueuedSurveyEvents,
   setOperatorName,
   setUserDatabaseValidation,
 } from './lib/offlineStore';
 
-const DOCUMENT_BUCKET = 'conduction-documents';
 const DELETE_FUNCTION = 'delete-local-record';
-const IMAGE_MAX_EDGE = 1400;
-const IMAGE_QUALITY = 0.7;
-const IMAGE_TARGET_BYTES = 500 * 1024;
-const IMAGE_TARGET_MB = 0.48;
-const COMPRESSED_IMAGE_TYPE = 'image/jpeg';
 const SYNC_TIMEOUT_MS = 20000;
 const f660Ra225Image = new URL('../Captura de pantalla 2026-07-23 153510.png', import.meta.url).href;
 const f660Ra226Image = new URL('../Captura de pantalla 2026-07-23 153610.png', import.meta.url).href;
@@ -212,120 +202,6 @@ function createId() {
     const next = char === 'x' ? value : (value & 0x3) | 0x8;
     return next.toString(16);
   });
-}
-
-function blobToDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-function loadImageFile(file) {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('No se pudo procesar la imagen seleccionada.'));
-    };
-    image.src = url;
-  });
-}
-
-async function canvasCompressImageFile(file, maxEdge = IMAGE_MAX_EDGE, quality = IMAGE_QUALITY) {
-  try {
-    let blob = await imageCompression(file, {
-      alwaysKeepResolution: false,
-      fileType: COMPRESSED_IMAGE_TYPE,
-      initialQuality: IMAGE_QUALITY,
-      maxSizeMB: IMAGE_TARGET_MB,
-      maxWidthOrHeight: IMAGE_MAX_EDGE,
-      useWebWorker: true,
-    });
-
-    if (blob.size > IMAGE_TARGET_BYTES) {
-      const steps = [
-        { maxEdge: 1280, quality: 0.66 },
-        { maxEdge: 1120, quality: 0.62 },
-        { maxEdge: 960, quality: 0.58 },
-      ];
-      for (const step of steps) {
-        blob = await canvasCompressImageFile(blob, step.maxEdge, step.quality);
-        if (blob.size <= IMAGE_TARGET_BYTES) break;
-      }
-    }
-
-    const cleanName = (file.name || 'documento').replace(/\.[^.]+$/, '');
-    return {
-      dataUrl: await blobToDataUrl(blob),
-      fileName: `${cleanName}.jpg`,
-      mimeType: COMPRESSED_IMAGE_TYPE,
-      compressedSize: blob.size,
-      originalSize: file.size,
-    };
-  } catch (_error) {
-    // Continue with the local canvas fallback below.
-  }
-
-  const image = await loadImageFile(file);
-  const width = image.naturalWidth || image.width;
-  const height = image.naturalHeight || image.height;
-  const scale = Math.min(1, maxEdge / Math.max(width, height));
-  const nextWidth = Math.max(1, Math.round(width * scale));
-  const nextHeight = Math.max(1, Math.round(height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = nextWidth;
-  canvas.height = nextHeight;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('No se pudo preparar la compresion de imagen.');
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, nextWidth, nextHeight);
-  context.drawImage(image, 0, 0, nextWidth, nextHeight);
-
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, COMPRESSED_IMAGE_TYPE, quality));
-  if (!blob) throw new Error(`No se pudo comprimir ${file.name || 'la imagen'}.`);
-  return blob;
-}
-
-async function compressImageFile(file) {
-  const looksLikeImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
-  if (!looksLikeImage) {
-    throw new Error(`El archivo ${file.name || 'seleccionado'} no es una imagen válida.`);
-  }
-
-  const image = await loadImageFile(file);
-  const width = image.naturalWidth || image.width;
-  const height = image.naturalHeight || image.height;
-  const scale = Math.min(1, IMAGE_MAX_EDGE / Math.max(width, height));
-  const nextWidth = Math.max(1, Math.round(width * scale));
-  const nextHeight = Math.max(1, Math.round(height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = nextWidth;
-  canvas.height = nextHeight;
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('No se pudo preparar la compresión de imagen.');
-  context.fillStyle = '#ffffff';
-  context.fillRect(0, 0, nextWidth, nextHeight);
-  context.drawImage(image, 0, 0, nextWidth, nextHeight);
-
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, COMPRESSED_IMAGE_TYPE, IMAGE_QUALITY));
-  if (!blob) throw new Error(`No se pudo comprimir ${file.name || 'la imagen'}.`);
-
-  const cleanName = (file.name || 'documento').replace(/\.[^.]+$/, '');
-  return {
-    dataUrl: await blobToDataUrl(blob),
-    fileName: `${cleanName}.jpg`,
-    mimeType: COMPRESSED_IMAGE_TYPE,
-    compressedSize: blob.size,
-    originalSize: file.size,
-  };
 }
 
 function formatDate(value) {
@@ -682,11 +558,6 @@ function buildSurveyEventPayload(record) {
   };
 }
 
-function getDocumentStoragePath(record) {
-  if (record.filePath) return record.filePath;
-  return `${record.driverName || 'sin-conductor'}/${record.createdAt.slice(0, 10)}/${record.id}-${record.fileName}`;
-}
-
 async function deleteRemoteRecord(kind, record) {
   if (!record.deleteToken) {
     throw new Error('Este registro no tiene identificador de eliminación. Sincronice nuevamente o elimínelo desde el panel administrativo.');
@@ -873,15 +744,13 @@ function App() {
   const [measurementTab, setMeasurementTab] = useState('form');
   const [measurement, setMeasurement] = useState(initialMeasurement);
   const [measurements, setMeasurements] = useState(getQueuedMeasurements());
-  const [documents, setDocuments] = useState(getQueuedDocuments());
   const [surveyEvents, setSurveyEvents] = useState(getQueuedSurveyEvents());
-  const [documentFiles, setDocumentFiles] = useState([]);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminMeasurements, setAdminMeasurements] = useState([]);
-  const [adminDocuments, setAdminDocuments] = useState([]);
   const [adminSurveyEvents, setAdminSurveyEvents] = useState([]);
-  const [message, setMessage] = useState('');
+  const [notification, setNotification] = useState({ text: '' });
+  const message = notification.text;
   const [syncing, setSyncing] = useState(false);
   const [syncUiStatus, setSyncUiStatus] = useState('idle');
   const [checkingUserAccess, setCheckingUserAccess] = useState(false);
@@ -892,11 +761,26 @@ function App() {
   const pendingCount = useMemo(
     () => (
       measurements.filter((item) => item.syncStatus !== 'synced').length
-      + documents.filter((item) => item.syncStatus !== 'synced').length
       + surveyEvents.filter((item) => item.syncStatus !== 'synced').length
     ),
-    [measurements, documents, surveyEvents],
+    [measurements, surveyEvents],
   );
+
+  function setMessage(text) {
+    setNotification({ text });
+  }
+
+  useEffect(() => {
+    if (!notification.text) return undefined;
+    const timeoutId = window.setTimeout(() => {
+      setNotification((current) => current === notification ? { text: '' } : current);
+    }, 4000);
+    return () => window.clearTimeout(timeoutId);
+  }, [notification]);
+
+  useEffect(() => {
+    localStorage.removeItem('mantos_documents_queue_v1');
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -935,47 +819,6 @@ function App() {
     return () => window.clearTimeout(retryId);
   }, [isOnline, canUseSupabase, pendingCount, syncing]);
 
-  useEffect(() => {
-    if (!canUseSupabase || !isOnline || accessRole !== 'user') return undefined;
-    let cancelled = false;
-    let channel = null;
-
-    const refresh = () => {
-      if (!cancelled) reconcileOperatorDocuments(getQueuedDocuments(), { silent: true });
-    };
-
-    async function subscribeToDocumentChanges() {
-      try {
-        await ensureOperatorAuth();
-        if (cancelled) return;
-        channel = supabase
-          .channel('operator-conduction-documents-cache')
-          .on(
-            'postgres_changes',
-            { event: '*', schema: 'public', table: 'conduction_documents' },
-            refresh,
-          )
-          .subscribe();
-      } catch (_error) {
-        refresh();
-      }
-    }
-
-    subscribeToDocumentChanges();
-    refresh();
-
-    return () => {
-      cancelled = true;
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [canUseSupabase, isOnline, accessRole]);
-
-  useEffect(() => {
-    if (screen !== 'conduction' || accessRole !== 'user' || !isOnline || !canUseSupabase) return undefined;
-    reconcileOperatorDocuments(documents, { silent: true });
-    return undefined;
-  }, [screen, accessRole, isOnline, canUseSupabase, documents]);
-
   async function ensureOperatorAuth() {
     if (!canUseSupabase || !navigator.onLine) return null;
     const current = await supabase.auth.getSession();
@@ -1012,44 +855,6 @@ function App() {
     assertSupabaseSuccess(response, 'La base de datos no respondió correctamente.');
     setUserDatabaseValidation(operatorName);
     return { mode: 'online', validatedAt: new Date().toISOString() };
-  }
-
-  async function reconcileOperatorDocuments(sourceDocuments = documents, options = {}) {
-    const { silent = false } = options;
-    if (!canUseSupabase || accessRole !== 'user' || !navigator.onLine) return sourceDocuments;
-
-    const syncedDocuments = sourceDocuments.filter((doc) => doc.syncStatus === 'synced' && doc.id);
-    if (!syncedDocuments.length) return sourceDocuments;
-
-    try {
-      await ensureOperatorAuth();
-      const ids = [...new Set(syncedDocuments.map((doc) => doc.id))];
-      const response = await withTimeout(
-        supabase
-          .from('conduction_documents')
-          .select('id, file_path')
-          .in('id', ids)
-          .not('file_path', 'is', null),
-      );
-      assertSupabaseSuccess(response, 'No se pudo validar la documentacion activa.');
-
-      const activeIds = new Set((response.data || []).map((doc) => doc.id));
-      const nextDocuments = sourceDocuments.filter((doc) => doc.syncStatus !== 'synced' || activeIds.has(doc.id));
-
-      if (nextDocuments.length !== sourceDocuments.length) {
-        setDocuments(nextDocuments);
-        saveQueuedDocuments(nextDocuments);
-        if (!silent) setMessage('Documentacion local actualizada con los cambios del administrador.');
-      }
-
-      return nextDocuments;
-    } catch (error) {
-      if (!silent) {
-        const syncError = createSyncError(error, 'No se pudo actualizar la documentacion desde Supabase.');
-        setMessage(syncError.message);
-      }
-      return sourceDocuments;
-    }
   }
 
   async function syncPending() {
@@ -1103,45 +908,6 @@ function App() {
         }
       }
 
-      const nextDocuments = [];
-      for (const record of documents) {
-        if (record.syncStatus === 'synced') {
-          nextDocuments.push(record);
-          continue;
-        }
-        const storagePath = getDocumentStoragePath(record);
-        try {
-          const blob = dataUrlToBlob(record.dataUrl);
-          const upload = await withTimeout(
-            supabase.storage.from(DOCUMENT_BUCKET).upload(storagePath, blob, {
-              contentType: record.mimeType,
-              upsert: true,
-            }),
-          );
-          assertSupabaseSuccess(upload, 'No se confirmó la carga del documento.');
-
-          const response = await withTimeout(
-            supabase.from('conduction_documents').upsert({
-              id: record.id,
-              driver_name: record.driverName,
-              operator_name: record.operatorName,
-              file_name: record.fileName,
-              file_path: storagePath,
-              uploaded_at: record.createdAt,
-              delete_token: record.deleteToken || null,
-            }, { onConflict: 'id' }),
-          );
-          assertSupabaseSuccess(response, 'No se confirmó el registro del documento.');
-          syncedCount += 1;
-          nextDocuments.push({ ...record, filePath: storagePath, syncStatus: 'synced', syncError: '' });
-        } catch (error) {
-          const syncError = createSyncError(error);
-          if (syncError.kind === 'error_red') hasNetworkError = true;
-          failedCount += 1;
-          nextDocuments.push({ ...record, syncStatus: 'pending', syncError: syncError.message });
-        }
-      }
-
       const nextSurveyEvents = [];
       for (const record of surveyEvents) {
         if (record.syncStatus === 'synced') {
@@ -1166,12 +932,9 @@ function App() {
       }
 
       setMeasurements(nextMeasurements);
-      setDocuments(nextDocuments);
       setSurveyEvents(nextSurveyEvents);
       saveQueuedMeasurements(nextMeasurements);
-      saveQueuedDocuments(nextDocuments);
       saveQueuedSurveyEvents(nextSurveyEvents);
-      await reconcileOperatorDocuments(nextDocuments, { silent: true });
 
       if (failedCount > 0) {
         const status = hasNetworkError ? 'error_red' : 'error';
@@ -1197,22 +960,12 @@ function App() {
 
   async function loadAdminData() {
     if (!session || !canUseSupabase) return;
-    const [measurementResult, documentResult, surveyResult] = await Promise.all([
+    const [measurementResult, surveyResult] = await Promise.all([
       supabase.from('irrigation_measurements').select('*').order('measured_at', { ascending: false }).limit(200),
-      supabase.from('conduction_documents').select('*').order('uploaded_at', { ascending: false }).limit(200),
       supabase.from('survey_events').select('*').order('opened_at', { ascending: false }).limit(300),
     ]);
     if (!measurementResult.error) setAdminMeasurements(measurementResult.data || []);
     if (!surveyResult.error) setAdminSurveyEvents(surveyResult.data || []);
-    if (!documentResult.error) {
-      const rows = await Promise.all(
-        (documentResult.data || []).map(async (doc) => {
-          const signed = await supabase.storage.from(DOCUMENT_BUCKET).createSignedUrl(doc.file_path, 60 * 10);
-          return { ...doc, signedUrl: signed.data?.signedUrl || '' };
-        }),
-      );
-      setAdminDocuments(rows);
-    }
   }
 
   async function handleAdminLogin(event) {
@@ -1387,86 +1140,6 @@ function App() {
     }
   }
 
-  async function saveDocuments(event) {
-    event.preventDefault();
-    if (!documentFiles.length) {
-      setMessage('Seleccione al menos una imagen.');
-      return;
-    }
-    const created = [];
-    for (const file of documentFiles) {
-      const compressed = await compressImageFile(file);
-      created.push({
-        id: createId(),
-        driverName: activeOperator,
-        operatorName: activeOperator,
-        fileName: compressed.fileName,
-        mimeType: compressed.mimeType,
-        dataUrl: compressed.dataUrl,
-        originalSize: compressed.originalSize,
-        compressedSize: compressed.compressedSize,
-        createdAt: nowIso(),
-        deleteToken: createId(),
-        syncStatus: 'pending',
-        syncError: '',
-      });
-    }
-    const next = [...created, ...getQueuedDocuments()];
-    saveQueuedDocuments(next);
-    setDocuments(next);
-    setDocumentFiles([]);
-    setMessage('Documentación guardada localmente.');
-  }
-
-  async function deleteDocument(record) {
-    if (!canUseSupabase || record.syncStatus !== "synced") {
-      const next = documents.filter((doc) => doc.id !== record.id);
-      setDocuments(next);
-      saveQueuedDocuments(next);
-      setMessage("Documento eliminado del dispositivo.");
-      return;
-    }
-    if (!navigator.onLine) {
-      setMessage("Se requiere conexion para eliminar un documento ya sincronizado.");
-      return;
-    }
-
-    try {
-      await deleteRemoteRecord("document", record);
-    } catch (error) {
-      setMessage(error?.message || "No se pudo eliminar el documento en Supabase.");
-      return;
-    }
-
-    const next = documents.filter((doc) => doc.id !== record.id);
-    setDocuments(next);
-    saveQueuedDocuments(next);
-    setMessage("Documento eliminado del dispositivo y de Supabase.");
-  }
-
-  async function deleteAdminDocument(record) {
-    if (!record || !canUseSupabase || !navigator.onLine) {
-      setMessage('Se requiere conexion para eliminar imagenes del panel administrador.');
-      return;
-    }
-
-    try {
-      await deleteRemoteRecord('document', {
-        id: record.id,
-        deleteToken: record.delete_token || record.deleteToken,
-      });
-      setAdminDocuments((items) => items.filter((item) => item.id !== record.id));
-      setDocuments((items) => {
-        const next = items.filter((item) => item.id !== record.id);
-        saveQueuedDocuments(next);
-        return next;
-      });
-      setMessage('Imagen de conduccion eliminada de Supabase y Storage.');
-    } catch (error) {
-      setMessage(error?.message || 'No se pudo eliminar la imagen de conduccion.');
-    }
-  }
-
   async function deleteAllAdminMeasurements() {
     if (!session || !canUseSupabase || !navigator.onLine) {
       setMessage('Se requiere una sesion administrativa con conexion para eliminar todas las tasas.');
@@ -1601,7 +1274,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      {message && <div className="toast show">{message}</div>}
+      {message && <div className="toast show" role="status" aria-live="polite" aria-atomic="true">{message}</div>}
 
       {screen === 'login' && (
         <LoginScreen
@@ -1630,7 +1303,6 @@ function App() {
           isOnline={isOnline}
           syncing={syncing}
           measurements={measurements}
-          documents={documents}
           onNavigate={setScreen}
           onSync={syncPending}
           syncUiStatus={syncUiStatus}
@@ -1656,23 +1328,6 @@ function App() {
           onShareHistory={shareMeasurementHistory}
           onBack={() => setScreen('menu')}
           onSubmit={saveMeasurement}
-          onTheme={toggleTheme}
-          onLogout={closeSession}
-          theme={theme}
-        />
-      )}
-
-      {screen === 'conduction' && (
-        <ConductionScreen
-          operator={activeOperator}
-          pendingCount={pendingCount}
-          isOnline={isOnline}
-          documents={documents}
-          files={documentFiles}
-          setFiles={setDocumentFiles}
-          onBack={() => setScreen('menu')}
-          onSubmit={saveDocuments}
-          onDeleteDocument={deleteDocument}
           onTheme={toggleTheme}
           onLogout={closeSession}
           theme={theme}
@@ -1743,9 +1398,7 @@ function App() {
           onLogout={closeSession}
           onRefresh={loadAdminData}
           onDeleteAllMeasurements={deleteAllAdminMeasurements}
-          onDeleteDocument={deleteAdminDocument}
           measurements={adminMeasurements}
-          documents={adminDocuments}
           surveyEvents={adminSurveyEvents}
           onBack={() => setScreen(accessRole === 'admin' ? 'menu' : 'login')}
           onTheme={toggleTheme}
@@ -1843,73 +1496,69 @@ function LoginScreen({
   );
 }
 
-function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
+function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme, isMenu = false }) {
+  const isToolHeader = isMenu || Boolean(onBack);
+
   return (
-    <header className="app-header">
+    <header className={`app-header ${isMenu ? 'app-header-menu' : ''} ${onBack ? 'app-header-tool' : ''}`}>
       <div className="header-top">
-        {onBack ? <button className="btn-back" type="button" onClick={onBack}>Volver al menú</button> : <div className="header-logo-text">MantosGroup</div>}
-        <div className="header-right">
-          <span className="header-subtitle">{title}</span>
-          <div className="header-actions">
-            <button className="theme-toggle" type="button" onClick={onTheme} aria-pressed={theme === 'dark'}>
-              <span className="theme-toggle-mark" />
-              {theme === 'dark' ? 'Claro' : 'Oscuro'}
-            </button>
+        {isToolHeader ? (
+          <div className="header-brand-actions">
+            <img className="header-logo" src="/mantos_group_logo.jpg" alt="Mantos Group" />
             <button className="user-badge" type="button" onClick={onLogout} title="Cerrar sesión">
               <span className="user-avatar">{initials(operator)}</span>
               <span>{operator || 'Operador'}</span>
               <span className="logout-label">Cerrar sesión</span>
             </button>
           </div>
-          <span className="header-subtitle">{isOnline ? 'Con conexión' : 'Sin conexión'} · {pendingCount} pendiente(s)</span>
+        ) : (
+          <img className="header-logo" src="/mantos_group_logo.jpg" alt="Mantos Group" />
+        )}
+        <div className={isToolHeader ? 'header-menu-right' : 'header-right'}>
+          {!isToolHeader && <span className="header-subtitle">{title}</span>}
+          <div className={`header-actions ${isToolHeader ? 'header-menu-actions' : ''}`}>
+            <button className="theme-toggle" type="button" onClick={onTheme} aria-pressed={theme === 'dark'}>
+              <span className="theme-toggle-mark" />
+              {theme === 'dark' ? 'Claro' : 'Oscuro'}
+            </button>
+            {!isToolHeader && (
+              <button className="user-badge" type="button" onClick={onLogout} title="Cerrar sesión">
+                <span className="user-avatar">{initials(operator)}</span>
+                <span>{operator || 'Operador'}</span>
+                <span className="logout-label">Cerrar sesión</span>
+              </button>
+            )}
+          </div>
+          {!isToolHeader && <span className="header-subtitle">{isOnline ? 'Con conexión' : 'Sin conexión'} · {pendingCount} pendiente(s)</span>}
         </div>
       </div>
+      {onBack && (
+        <div className="header-tool-navigation">
+          <button className="btn-back" type="button" onClick={onBack}>Volver al menú</button>
+        </div>
+      )}
     </header>
   );
 }
 
-function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syncUiStatus, measurements, documents, onNavigate, onSync, onTheme, onLogout, theme }) {
-  const latestRate = measurements.length ? Number(measurements[0]?.irrigationRate || 0) : 0;
-  const pendingLabel = pendingCount === 1 ? 'pendiente' : 'pendientes';
+function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syncUiStatus, measurements, onNavigate, onSync, onTheme, onLogout, theme }) {
   const isOfflineMeasurementOnly = accessRole === 'offline';
 
   return (
     <section id="menu-screen">
-      <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} />
+      <Header operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} isMenu />
       <div className="menu-welcome">
-        <p>Bienvenido, {operator}</p>
-        <span>{isOfflineMeasurementOnly ? 'Acceso offline limitado a medición de tasa de riego.' : 'Seleccione el módulo de trabajo.'}</span>
-      </div>
-      <div className="operation-summary">
-        <div className="operation-summary-main">
-          <span>Operación activa</span>
-          <strong>{isOnline ? 'Sistema en línea' : 'Trabajo offline'}</strong>
-          <p>{pendingCount} {pendingLabel} por sincronizar</p>
-        </div>
-        <div className="operation-metrics">
-          <div>
-            <strong>{measurements.length}</strong>
-            <span>Mediciones</span>
-          </div>
-          {!isOfflineMeasurementOnly && <div>
-            <strong>{documents.length}</strong>
-            <span>Documentos</span>
-          </div>}
-          <div>
-            <strong>{latestRate.toFixed(1)}</strong>
-            <span>Última L/h</span>
-          </div>
-        </div>
+        <p>Bienvenido, {operator}. ¿Qué necesitas realizar hoy?</p>
+        <span>{isOfflineMeasurementOnly ? 'En este acceso puedes registrar mediciones de tasa de riego.' : 'Elige una sección para comenzar.'}</span>
       </div>
       <div className="menu-list">
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
-        {!isOfflineMeasurementOnly && <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />}
-        {!isOfflineMeasurementOnly && <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />}
         {!isOfflineMeasurementOnly && <MenuCard icon="PR" title="Procedimientos" desc="Consulte procedimientos locales cargados en la aplicación, disponibles sin conexión." procedure onClick={() => onNavigate('procedures')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />}
         {accessRole === 'admin' && !isOfflineMeasurementOnly && (
-          <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
+          <MenuCard icon="AD" title="Panel administrador" desc="Revise el historial de tasas de riego y encuestas." onClick={() => onNavigate('admin')} />
         )}
         {syncUiStatus !== 'idle' && (
           <div className={`sync-status-banner ${syncUiStatus}`}>
@@ -1939,6 +1588,80 @@ function MenuCard({ icon, title, desc, onClick, alt, brown, lifting, procedure }
   );
 }
 
+function SurveyReminder() {
+  const native = window.Capacitor?.getPlatform?.() === 'android';
+  const [status, setStatus] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function reminderCall(method, options = {}) {
+    if (!native || !window.Capacitor?.nativePromise) throw new Error('Disponible en la aplicación Android.');
+    return window.Capacitor.nativePromise('SurveyReminder', method, options);
+  }
+
+  useEffect(() => {
+    if (!native) return;
+    let active = true;
+    const refresh = async () => {
+      if (document.hidden) return;
+      try {
+        const next = await reminderCall('status');
+        if (active) setStatus(next);
+      } catch {
+        if (active) setError('Actualiza la aplicación para habilitar los recordatorios.');
+      }
+    };
+    refresh();
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      active = false;
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [native]);
+
+  async function toggleReminder() {
+    setBusy(true);
+    setError('');
+    try {
+      setStatus(await reminderCall('configure', { enabled: !status?.enabled }));
+    } catch (failure) {
+      setError(failure.message || 'No se pudo configurar el recordatorio.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function enableExactTime() {
+    try {
+      await reminderCall('openExactSettings');
+    } catch {
+      setError('No se pudieron abrir los ajustes del teléfono.');
+    }
+  }
+
+  return (
+    <section className="card">
+      <h3 className="card-title">Recordatorio de encuestas</h3>
+      <p>Todos los días a las 08:00, hora de Chile (Santiago).</p>
+      <p>Recuerda completar tus encuestas antes de iniciar la jornada.</p>
+      <button className="btn-secondary" type="button" onClick={toggleReminder} disabled={!native || !status || busy} aria-pressed={Boolean(status?.enabled)}>
+        {busy ? 'Configurando...' : status?.enabled ? 'Desactivar recordatorio' : 'Activar recordatorio'}
+      </button>
+      {!native && <p>Disponible en la aplicación instalada en Android.</p>}
+      {status?.enabled && !status.notificationsAllowed && <p role="alert">Habilita las notificaciones de Mantos App en los ajustes del teléfono.</p>}
+      {status?.enabled && !status.exactAllowed && (
+        <div>
+          <p>Android puede retrasar el aviso. Permite el horario preciso para recibirlo a las 08:00.</p>
+          <button className="btn-secondary" type="button" onClick={enableExactTime}>Permitir horario preciso</button>
+        </div>
+      )}
+      {error && <p role="alert">{error}</p>}
+    </section>
+  );
+}
+
 function SurveyScreen({ operator, pendingCount, isOnline, onBack, onOpenSurvey, onTheme, onLogout, theme }) {
   return (
     <section>
@@ -1949,6 +1672,7 @@ function SurveyScreen({ operator, pendingCount, isOnline, onBack, onOpenSurvey, 
           <h2>Encuestas</h2>
           <p>Seleccione el formulario correspondiente. Cada opción abrirá el enlace externo en el navegador del dispositivo.</p>
         </div>
+        <SurveyReminder />
         <div className="menu-list survey-list">
           {SURVEY_LINKS.map((survey, index) => (
             <MenuCard
@@ -2829,56 +2553,6 @@ function Stat({ label, value }) {
   );
 }
 
-function ConductionScreen({ operator, pendingCount, isOnline, documents, files, setFiles, onBack, onSubmit, onDeleteDocument, onTheme, onLogout, theme }) {
-  return (
-    <section>
-      <Header title="Conducción" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
-      <div className="content">
-        <form onSubmit={onSubmit}>
-          <label className="cond-upload-card" htmlFor="cond-input">
-            <div className="cond-upload-icon">DC</div>
-            <div className="cond-upload-title">Cargar documentación</div>
-            <div className="cond-upload-desc">Seleccione una o más imágenes. Se guardan offline hasta sincronizar.</div>
-            <input id="cond-input" type="file" accept="image/*" multiple onChange={(event) => setFiles(Array.from(event.target.files || []))} />
-          </label>
-          {files.length > 0 && <p className="selected-files">{files.length} archivo(s) seleccionado(s).</p>}
-          <button className="btn-save" type="submit">Guardar documentación</button>
-        </form>
-        <LocalDocuments documents={documents} onDelete={onDeleteDocument} />
-      </div>
-    </section>
-  );
-}
-
-function LocalDocuments({ documents, onDelete }) {
-  const [preview, setPreview] = useState(null);
-
-  return (
-    <div className="card">
-      <div className="cond-section-title">
-        <span>Documentación local</span>
-        <strong>{documents.length}</strong>
-      </div>
-      {!documents.length && <div className="cond-empty-hint">No hay documentos cargados.</div>}
-      <div className="cond-gallery">
-        {documents.map((doc) => (
-          <article className="cond-thumb" key={doc.id}>
-            <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.dataUrl, title: doc.fileName })}>
-              <img src={doc.dataUrl} alt={doc.fileName} />
-            </button>
-            <div className="cond-thumb-info">
-              <strong>{doc.fileName}</strong>
-              <span>{formatDate(doc.createdAt)} · {doc.syncStatus === 'synced' ? 'Sincronizado' : 'Pendiente'}</span>
-              <button className="btn-delete-doc" type="button" onClick={() => onDelete(doc)}>Eliminar imagen</button>
-            </div>
-          </article>
-        ))}
-      </div>
-      {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
-    </div>
-  );
-}
-
 function ImageZoomModal({ image, onClose }) {
   const [zoom, setZoom] = useState(1);
 
@@ -3006,9 +2680,7 @@ function AdminScreen({
   onLogout,
   onRefresh,
   onDeleteAllMeasurements,
-  onDeleteDocument,
   measurements,
-  documents,
   surveyEvents,
   onBack,
   onTheme,
@@ -3057,10 +2729,6 @@ function AdminScreen({
                 <strong>{averageRate.toFixed(1)}</strong>
               </div>
               <div className="admin-kpi-card">
-                <span>Documentos</span>
-                <strong>{documents.length}</strong>
-              </div>
-              <div className="admin-kpi-card">
                 <span>Encuestas</span>
                 <strong>{surveyEvents.length}</strong>
               </div>
@@ -3075,14 +2743,6 @@ function AdminScreen({
                 <span>{measurements.length} registro(s)</span>
               </button>
               <button
-                className={activeAdminCategory === 'documents' ? 'active' : ''}
-                type="button"
-                onClick={() => setActiveAdminCategory('documents')}
-              >
-                Conducción
-                <span>{documents.length} documento(s)</span>
-              </button>
-              <button
                 className={activeAdminCategory === 'surveys' ? 'active' : ''}
                 type="button"
                 onClick={() => setActiveAdminCategory('surveys')}
@@ -3092,7 +2752,6 @@ function AdminScreen({
               </button>
             </div>
             {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} onDeleteAll={onDeleteAllMeasurements} />}
-            {activeAdminCategory === 'documents' && <AdminDocuments rows={documents} onDeleteDocument={onDeleteDocument} />}
             {activeAdminCategory === 'surveys' && <AdminSurveyHistory rows={surveyEvents} />}
           </>
         )}
@@ -3262,69 +2921,6 @@ function AdminSurveyHistory({ rows }) {
           </section>
         ))}
       </div>
-    </div>
-  );
-}
-
-function AdminDocuments({ rows, onDeleteDocument }) {
-  const [preview, setPreview] = useState(null);
-  const [openOperator, setOpenOperator] = useState('');
-  const operatorGroups = useMemo(() => {
-    const groups = new Map();
-    for (const doc of rows) {
-      const name = doc.driver_name || doc.operator_name || 'Sin operador';
-      if (!groups.has(name)) groups.set(name, []);
-      groups.get(name).push(doc);
-    }
-    return Array.from(groups.entries()).map(([name, documents]) => ({ name, documents }));
-  }, [rows]);
-  const selectedGroup = operatorGroups.find((group) => group.name === openOperator) || null;
-
-  return (
-    <div className="card">
-      <div className="card-title">Documentacion de conduccion</div>
-      {!rows.length && <div className="cond-empty-hint">No hay documentos sincronizados.</div>}
-      {operatorGroups.length > 0 && (
-        <div className="admin-driver-list">
-          {operatorGroups.map((group) => (
-            <button
-              key={group.name}
-              className={`admin-driver-row ${openOperator === group.name ? 'active' : ''}`}
-              type="button"
-              onClick={() => setOpenOperator((current) => (current === group.name ? '' : group.name))}
-            >
-              <span>{group.name}</span>
-              <strong>{group.documents.length} imagen(es)</strong>
-            </button>
-          ))}
-        </div>
-      )}
-      {selectedGroup && (
-        <div className="admin-doc-grid">
-          {selectedGroup.documents.map((doc) => (
-            <article key={doc.id} className="admin-doc-card">
-              {doc.signedUrl ? (
-                <button className="image-preview-button" type="button" onClick={() => setPreview({ src: doc.signedUrl, title: doc.file_name })}>
-                  <img src={doc.signedUrl} alt={doc.file_name} />
-                </button>
-              ) : null}
-              <div className="admin-doc-meta">
-                <strong>{doc.file_name}</strong>
-                <span>{formatDate(doc.uploaded_at)}</span>
-              </div>
-              <button
-                className="admin-doc-trash"
-                type="button"
-                aria-label={`Eliminar ${doc.file_name}`}
-                onClick={() => onDeleteDocument?.(doc)}
-              >
-                <TrashIcon />
-              </button>
-            </article>
-          ))}
-        </div>
-      )}
-      {preview && <ImageZoomModal image={preview} onClose={() => setPreview(null)} />}
     </div>
   );
 }

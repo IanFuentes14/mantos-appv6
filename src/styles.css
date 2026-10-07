@@ -383,10 +383,13 @@ textarea:focus {
   background: rgba(255, 255, 255, 0.08);
 }
 
-.header-logo-text {
-  color: #fff;
-  font-size: 17px;
-  font-weight: 800;
+.header-logo {
+  display: block;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  object-fit: contain;
 }
 
 .header-right {
@@ -1878,9 +1881,50 @@ html {
   background: rgba(255, 255, 255, 0.11);
 }
 
-.header-logo-text {
-  font-size: 18px;
-  font-weight: 900;
+.header-logo {
+  width: 56px;
+  height: 56px;
+}
+
+.app-header-menu .header-top {
+  justify-content: space-between;
+}
+
+.app-header-tool .header-top {
+  justify-content: space-between;
+}
+
+.header-brand-actions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-menu-right {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.header-menu-actions {
+  flex-wrap: nowrap;
+}
+
+.app-header-menu .user-badge,
+.app-header-tool .user-badge {
+  min-width: 0;
+  max-width: min(52vw, 240px);
+}
+
+.app-header-menu .user-badge > span:nth-child(2),
+.app-header-tool .user-badge > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-tool-navigation {
+  padding: 8px 12px 0;
 }
 
 .header-subtitle,
@@ -2152,7 +2196,7 @@ html {
 
 .admin-dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -2798,9 +2842,9 @@ select:focus-visible {
   color: #ffffff;
 }
 
-.header-logo-text {
-  font-size: 18px;
-  font-weight: 950;
+.header-logo {
+  width: 56px;
+  height: 56px;
 }
 
 .header-subtitle,
