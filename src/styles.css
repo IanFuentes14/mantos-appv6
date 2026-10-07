@@ -513,6 +513,10 @@ textarea:focus {
   background: linear-gradient(135deg, var(--blue-dark), var(--blue-mid));
 }
 
+.menu-card-icon.procedure {
+  background: linear-gradient(135deg, #315f86, #4e8fc0);
+}
+
 .menu-card-text {
   flex: 1;
 }
@@ -2004,6 +2008,10 @@ html {
   background: var(--blue-dark);
 }
 
+.menu-card-icon.procedure {
+  background: #315f86;
+}
+
 .menu-card-title {
   color: var(--text-primary);
   font-size: 16px;
@@ -2144,7 +2152,7 @@ html {
 
 .admin-dashboard-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 14px;
 }
@@ -2181,6 +2189,39 @@ html {
 
 .admin-category-tabs button.active {
   background: var(--blue-mid);
+}
+
+.admin-survey-groups {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-survey-group {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-survey-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-strong);
+}
+
+.admin-survey-group-head strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.admin-survey-group-head span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 input[type="text"],
@@ -2518,6 +2559,10 @@ th {
     grid-template-columns: 1fr;
   }
 
+  .admin-dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .lifting-controls-card,
   .weight-fields,
   .formula-results-grid,
@@ -2824,6 +2869,110 @@ select:focus-visible {
 
 .content .survey-list {
   padding: 0;
+}
+
+.procedure-category-list {
+  display: grid;
+  gap: 12px;
+}
+
+.procedure-category-card {
+  display: grid;
+  gap: 14px;
+}
+
+.procedure-category-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.procedure-category-head p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.procedure-category-head > span {
+  display: grid;
+  min-width: 42px;
+  height: 34px;
+  place-items: center;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--blue-mid);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.procedure-document-list {
+  display: grid;
+  gap: 8px;
+}
+
+.procedure-document-button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 10px;
+  align-items: center;
+  min-height: 64px;
+  padding: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.procedure-document-button > span {
+  display: grid;
+  width: 42px;
+  height: 36px;
+  grid-row: 1 / span 2;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--blue-mid);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.procedure-document-button > strong {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.procedure-document-button > small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.procedure-empty-state {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: var(--surface-strong);
+}
+
+.procedure-empty-state strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.procedure-empty-state span {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
 }
 
 .sync-status-banner {
@@ -3282,6 +3431,12 @@ th {
   box-shadow: none;
 }
 
+.login-card.access-card .offline-access-button {
+  margin-top: 10px;
+  justify-content: center;
+  background: #ffffff;
+}
+
 .login-card.access-card .theme-toggle-mark {
   background: #0647a5;
   box-shadow: 0 0 0 4px rgba(6, 71, 165, 0.14);
@@ -3308,6 +3463,10 @@ th {
   border-color: #4a6684;
   background: #143556;
   color: #d8ecff;
+}
+
+:root[data-theme="dark"] .login-card.access-card .offline-access-button {
+  background: #0e2742;
 }
 
 :root[data-theme="dark"] .login-card.access-card .theme-toggle-mark {

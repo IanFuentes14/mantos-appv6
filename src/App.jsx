@@ -4,12 +4,17 @@ import { glossaryTerms } from './data/glossary';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import {
   addQueuedMeasurement,
+  addQueuedSurveyEvent,
   dataUrlToBlob,
   getQueuedDocuments,
   getQueuedMeasurements,
+  getQueuedSurveyEvents,
+  getUserDatabaseValidation,
   saveQueuedDocuments,
   saveQueuedMeasurements,
+  saveQueuedSurveyEvents,
   setOperatorName,
+  setUserDatabaseValidation,
 } from './lib/offlineStore';
 
 const DOCUMENT_BUCKET = 'conduction-documents';
@@ -138,20 +143,50 @@ const LIFTING_FORMULA_EXPLANATIONS = {
 };
 const SURVEY_LINKS = [
   {
+    category: 'salud',
     title: 'Estado de salud',
     url: 'https://encuestasalud.bubbleapps.io/version-test?debug_mode=true',
   },
   {
+    category: 'epp',
     title: 'Estado de elementos de protección personal',
     url: 'https://encuestasalud.bubbleapps.io/version-test/epp?debug_mode=true',
   },
   {
+    category: 'conductores',
     title: 'Estado de salud para conductores',
     url: 'https://encuestasalud.bubbleapps.io/version-test/fatiga_somnolencia_/Lorem%20ipsum',
   },
   {
+    category: 'gps',
     title: 'Estado de GPS',
     url: 'https://certificados.wisetrack.cl/LomasBayas/Resultado.aspx',
+  },
+];
+const PROCEDURE_CATEGORIES = [
+  {
+    id: 'operacionales',
+    title: 'Procedimientos operacionales',
+    description: 'Maniobras, controles de terreno y actividades de operación.',
+    documents: [],
+  },
+  {
+    id: 'seguridad',
+    title: 'Procedimientos de seguridad',
+    description: 'Controles críticos, permisos, emergencias y restricciones de trabajo.',
+    documents: [],
+  },
+  {
+    id: 'equipos',
+    title: 'Procedimientos de equipos',
+    description: 'Uso, revisión y control operacional de equipos y accesorios.',
+    documents: [],
+  },
+  {
+    id: 'administrativos',
+    title: 'Procedimientos administrativos',
+    description: 'Registros, documentación y respaldos requeridos para la actividad.',
+    documents: [],
   },
 ];
 
@@ -636,6 +671,17 @@ function buildMeasurementPayload(record) {
   };
 }
 
+function buildSurveyEventPayload(record) {
+  return {
+    id: record.id,
+    operator_name: record.operatorName,
+    survey_category: record.category,
+    survey_title: record.title,
+    survey_url: record.url,
+    opened_at: record.createdAt,
+  };
+}
+
 function getDocumentStoragePath(record) {
   if (record.filePath) return record.filePath;
   return `${record.driverName || 'sin-conductor'}/${record.createdAt.slice(0, 10)}/${record.id}-${record.fileName}`;
@@ -737,6 +783,12 @@ function openExternalUrl(url) {
   if (!opened) window.location.href = url;
 }
 
+function openLocalProcedurePdf(filePath) {
+  if (!filePath) return;
+  const opened = window.open(filePath, '_blank', 'noopener,noreferrer');
+  if (!opened) window.location.href = filePath;
+}
+
 function createSyncError(error, fallback = 'No se pudo sincronizar el registro.') {
   const rawMessage = error?.message || String(error || fallback);
   const lowerMessage = rawMessage.toLowerCase();
@@ -822,21 +874,28 @@ function App() {
   const [measurement, setMeasurement] = useState(initialMeasurement);
   const [measurements, setMeasurements] = useState(getQueuedMeasurements());
   const [documents, setDocuments] = useState(getQueuedDocuments());
+  const [surveyEvents, setSurveyEvents] = useState(getQueuedSurveyEvents());
   const [documentFiles, setDocumentFiles] = useState([]);
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminMeasurements, setAdminMeasurements] = useState([]);
   const [adminDocuments, setAdminDocuments] = useState([]);
+  const [adminSurveyEvents, setAdminSurveyEvents] = useState([]);
   const [message, setMessage] = useState('');
   const [syncing, setSyncing] = useState(false);
   const [syncUiStatus, setSyncUiStatus] = useState('idle');
+  const [checkingUserAccess, setCheckingUserAccess] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('mantos_theme') || 'light');
 
   const canUseSupabase = isSupabaseConfigured && supabase;
   const activeOperator = accessRole === 'admin' ? 'Administrador' : operator;
   const pendingCount = useMemo(
-    () => measurements.filter((item) => item.syncStatus !== 'synced').length + documents.filter((item) => item.syncStatus !== 'synced').length,
-    [measurements, documents],
+    () => (
+      measurements.filter((item) => item.syncStatus !== 'synced').length
+      + documents.filter((item) => item.syncStatus !== 'synced').length
+      + surveyEvents.filter((item) => item.syncStatus !== 'synced').length
+    ),
+    [measurements, documents, surveyEvents],
   );
 
   useEffect(() => {
@@ -926,6 +985,33 @@ function App() {
     const { data, error } = await supabase.auth.signInAnonymously();
     if (error) throw error;
     return data.session;
+  }
+
+  async function validateUserDatabaseAvailability(operatorName) {
+    if (!canUseSupabase) {
+      throw new Error('Supabase no está configurado. No es posible acceder como usuario.');
+    }
+    if (!navigator.onLine) {
+      const localValidation = getUserDatabaseValidation(operatorName);
+      if (localValidation) return { mode: 'offline', validatedAt: localValidation.validatedAt };
+      throw new Error('Sin conexión. Este operador debe ingresar al menos una vez con la base de datos operativa.');
+    }
+
+    const activeSession = await withTimeout(ensureOperatorAuth(), 10000);
+    if (!activeSession) {
+      throw new Error('No se pudo habilitar la sesión técnica para validar la base de datos.');
+    }
+
+    const response = await withTimeout(
+      supabase
+        .from('irrigation_measurements')
+        .select('id', { head: true, count: 'exact' })
+        .limit(1),
+      10000,
+    );
+    assertSupabaseSuccess(response, 'La base de datos no respondió correctamente.');
+    setUserDatabaseValidation(operatorName);
+    return { mode: 'online', validatedAt: new Date().toISOString() };
   }
 
   async function reconcileOperatorDocuments(sourceDocuments = documents, options = {}) {
@@ -1056,10 +1142,35 @@ function App() {
         }
       }
 
+      const nextSurveyEvents = [];
+      for (const record of surveyEvents) {
+        if (record.syncStatus === 'synced') {
+          nextSurveyEvents.push(record);
+          continue;
+        }
+        try {
+          const response = await withTimeout(
+            supabase
+              .from('survey_events')
+              .upsert(buildSurveyEventPayload(record), { onConflict: 'id' }),
+          );
+          assertSupabaseSuccess(response, 'No se confirmó el historial de encuesta.');
+          syncedCount += 1;
+          nextSurveyEvents.push({ ...record, syncStatus: 'synced', syncError: '' });
+        } catch (error) {
+          const syncError = createSyncError(error);
+          if (syncError.kind === 'error_red') hasNetworkError = true;
+          failedCount += 1;
+          nextSurveyEvents.push({ ...record, syncStatus: 'pending', syncError: syncError.message });
+        }
+      }
+
       setMeasurements(nextMeasurements);
       setDocuments(nextDocuments);
+      setSurveyEvents(nextSurveyEvents);
       saveQueuedMeasurements(nextMeasurements);
       saveQueuedDocuments(nextDocuments);
+      saveQueuedSurveyEvents(nextSurveyEvents);
       await reconcileOperatorDocuments(nextDocuments, { silent: true });
 
       if (failedCount > 0) {
@@ -1086,11 +1197,13 @@ function App() {
 
   async function loadAdminData() {
     if (!session || !canUseSupabase) return;
-    const [measurementResult, documentResult] = await Promise.all([
+    const [measurementResult, documentResult, surveyResult] = await Promise.all([
       supabase.from('irrigation_measurements').select('*').order('measured_at', { ascending: false }).limit(200),
       supabase.from('conduction_documents').select('*').order('uploaded_at', { ascending: false }).limit(200),
+      supabase.from('survey_events').select('*').order('opened_at', { ascending: false }).limit(300),
     ]);
     if (!measurementResult.error) setAdminMeasurements(measurementResult.data || []);
+    if (!surveyResult.error) setAdminSurveyEvents(surveyResult.data || []);
     if (!documentResult.error) {
       const rows = await Promise.all(
         (documentResult.data || []).map(async (doc) => {
@@ -1138,10 +1251,63 @@ function App() {
       setMessage('Ingrese el nombre del operador.');
       return;
     }
-    setOperatorName(operator.trim());
-    setAccessRole('user');
+    if (checkingUserAccess) return;
+
+    setCheckingUserAccess(true);
+    setMessage('Validando estado de la base de datos...');
+
+    try {
+      const operatorName = operator.trim();
+      const validation = await validateUserDatabaseAvailability(operatorName);
+      setOperatorName(operatorName);
+      setAccessRole('user');
+      setScreen('menu');
+      setMessage(
+        validation.mode === 'offline'
+          ? 'Ingreso offline habilitado. Operador validado previamente.'
+          : 'Ingreso de usuario habilitado. Base de datos operativa.',
+      );
+    } catch (error) {
+      const syncError = createSyncError(error, 'No se pudo validar la base de datos.');
+      setMessage(
+        syncError.kind === 'error_red'
+          ? 'Base de datos no disponible o sin respuesta. No es posible acceder como usuario.'
+          : syncError.message,
+      );
+    } finally {
+      setCheckingUserAccess(false);
+    }
+  }
+
+  function enterOfflineMeasurementMode(event) {
+    event.preventDefault();
+    const operatorName = operator.trim();
+    if (!operatorName) {
+      setMessage('Ingrese el nombre del operador.');
+      return;
+    }
+
+    setOperatorName(operatorName);
+    setAccessRole('offline');
     setScreen('menu');
-    if (canUseSupabase && navigator.onLine) await ensureOperatorAuth();
+    setMessage('Acceso offline habilitado. Solo estará disponible la medición de tasa de riego.');
+  }
+
+  function openSurvey(survey) {
+    const record = {
+      id: createId(),
+      operatorName: activeOperator,
+      category: survey.category,
+      title: survey.title,
+      url: survey.url,
+      createdAt: nowIso(),
+      syncStatus: 'pending',
+      syncError: '',
+    };
+    const next = addQueuedSurveyEvent(record);
+    setSurveyEvents(next);
+    setMessage('Registro de encuesta guardado. Se sincronizará con el panel administrador.');
+    openExternalUrl(survey.url);
   }
 
   function saveMeasurement(event) {
@@ -1442,12 +1608,14 @@ function App() {
           operator={operator}
           setOperator={setOperator}
           onSubmit={enterOffline}
+          onOfflineSubmit={enterOfflineMeasurementMode}
           adminEmail={adminEmail}
           adminPassword={adminPassword}
           setAdminEmail={setAdminEmail}
           setAdminPassword={setAdminPassword}
           onAdminLogin={handleAdminLogin}
           canUseSupabase={canUseSupabase}
+          checkingUserAccess={checkingUserAccess}
           onTheme={toggleTheme}
           onLogout={closeSession}
           theme={theme}
@@ -1541,6 +1709,19 @@ function App() {
           pendingCount={pendingCount}
           isOnline={isOnline}
           onBack={() => setScreen('menu')}
+          onOpenSurvey={openSurvey}
+          onTheme={toggleTheme}
+          onLogout={closeSession}
+          theme={theme}
+        />
+      )}
+
+      {screen === 'procedures' && (
+        <ProceduresScreen
+          operator={activeOperator}
+          pendingCount={pendingCount}
+          isOnline={isOnline}
+          onBack={() => setScreen('menu')}
           onTheme={toggleTheme}
           onLogout={closeSession}
           theme={theme}
@@ -1565,6 +1746,7 @@ function App() {
           onDeleteDocument={deleteAdminDocument}
           measurements={adminMeasurements}
           documents={adminDocuments}
+          surveyEvents={adminSurveyEvents}
           onBack={() => setScreen(accessRole === 'admin' ? 'menu' : 'login')}
           onTheme={toggleTheme}
           theme={theme}
@@ -1578,12 +1760,14 @@ function LoginScreen({
   operator,
   setOperator,
   onSubmit,
+  onOfflineSubmit,
   adminEmail,
   adminPassword,
   setAdminEmail,
   setAdminPassword,
   onAdminLogin,
   canUseSupabase,
+  checkingUserAccess,
   onTheme,
   theme,
 }) {
@@ -1611,6 +1795,7 @@ function LoginScreen({
             <span className="theme-toggle-mark" />
             {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
           </button>
+          <button className="theme-toggle login-theme-toggle offline-access-button" type="button" onClick={() => setMode('offline')}>Acceso Offline</button>
         </div>
       )}
 
@@ -1632,13 +1817,26 @@ function LoginScreen({
         <div className="login-form-title">Acceso usuario</div>
         <label htmlFor="operator-name">Operador o conductor</label>
         <input id="operator-name" type="text" value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Nombre del operador" />
-        <button className="btn-login" type="submit">Ingresar como usuario</button>
+        <button className="btn-login" type="submit" disabled={checkingUserAccess}>
+          {checkingUserAccess ? 'Validando base de datos...' : 'Ingresar como usuario'}
+        </button>
         <button className="btn-secondary admin-login-button" type="button" onClick={() => setMode('choice')}>Volver</button>
         <button className="theme-toggle login-theme-toggle" type="button" onClick={onTheme}>
           <span className="theme-toggle-mark" />
           {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
         </button>
         <p className="login-hint">Los registros quedan disponibles sin conexión y se sincronizan al recuperar señal.</p>
+      </form>
+      )}
+
+      {mode === 'offline' && (
+      <form className="login-card" onSubmit={onOfflineSubmit}>
+        <div className="login-form-title">Acceso offline</div>
+        <label htmlFor="operator-name-offline">Operador</label>
+        <input id="operator-name-offline" type="text" value={operator} onChange={(event) => setOperator(event.target.value)} placeholder="Nombre del operador" />
+        <button className="btn-login" type="submit">Ingresar offline</button>
+        <button className="btn-secondary admin-login-button" type="button" onClick={() => setMode('choice')}>Volver</button>
+        <p className="login-hint">Este acceso no valida la base de datos. Las mediciones quedarán pendientes y podrán sincronizarse cuando exista conexión.</p>
       </form>
       )}
     </section>
@@ -1673,13 +1871,14 @@ function Header({ title, operator, pendingCount, isOnline, onBack, onTheme, onLo
 function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syncUiStatus, measurements, documents, onNavigate, onSync, onTheme, onLogout, theme }) {
   const latestRate = measurements.length ? Number(measurements[0]?.irrigationRate || 0) : 0;
   const pendingLabel = pendingCount === 1 ? 'pendiente' : 'pendientes';
+  const isOfflineMeasurementOnly = accessRole === 'offline';
 
   return (
     <section id="menu-screen">
       <Header title="Menú principal" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onTheme={onTheme} onLogout={onLogout} theme={theme} />
       <div className="menu-welcome">
         <p>Bienvenido, {operator}</p>
-        <span>Seleccione el módulo de trabajo.</span>
+        <span>{isOfflineMeasurementOnly ? 'Acceso offline limitado a medición de tasa de riego.' : 'Seleccione el módulo de trabajo.'}</span>
       </div>
       <div className="operation-summary">
         <div className="operation-summary-main">
@@ -1692,10 +1891,10 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syn
             <strong>{measurements.length}</strong>
             <span>Mediciones</span>
           </div>
-          <div>
+          {!isOfflineMeasurementOnly && <div>
             <strong>{documents.length}</strong>
             <span>Documentos</span>
-          </div>
+          </div>}
           <div>
             <strong>{latestRate.toFixed(1)}</strong>
             <span>Última L/h</span>
@@ -1704,11 +1903,12 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syn
       </div>
       <div className="menu-list">
         <MenuCard icon="TR" title="Medición Tasa de Riego" desc={`${measurements.length} registro(s) locales. Calcule y guarde mediciones de terreno.`} onClick={() => onNavigate('measurement')} />
-        <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />
-        <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />
-        <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />
-        <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />
-        {accessRole === 'admin' && (
+        {!isOfflineMeasurementOnly && <MenuCard icon="IZ" title="Izajes" desc="Consulte formulas, calcule pesos y revise informacion operacional de izaje." lifting onClick={() => onNavigate('lifting')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="DC" title="Conducción" desc={`${documents.length} documento(s) locales. Cargue imágenes de documentación operacional.`} brown onClick={() => onNavigate('conduction')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="GT" title="Glosario de Términos" desc="Consulte definiciones y utilice el modo de prueba." alt onClick={() => onNavigate('glossary')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="EN" title="Encuestas" desc="Acceda a formularios externos de salud, EPP, conductores y GPS." onClick={() => onNavigate('surveys')} />}
+        {!isOfflineMeasurementOnly && <MenuCard icon="PR" title="Procedimientos" desc="Consulte procedimientos locales cargados en la aplicación, disponibles sin conexión." procedure onClick={() => onNavigate('procedures')} />}
+        {accessRole === 'admin' && !isOfflineMeasurementOnly && (
           <MenuCard icon="AD" title="Panel administrador" desc="Revise historial de tasas de riego y documentación sincronizada." onClick={() => onNavigate('admin')} />
         )}
         {syncUiStatus !== 'idle' && (
@@ -1726,10 +1926,10 @@ function MenuScreen({ operator, accessRole, pendingCount, isOnline, syncing, syn
   );
 }
 
-function MenuCard({ icon, title, desc, onClick, alt, brown, lifting }) {
+function MenuCard({ icon, title, desc, onClick, alt, brown, lifting, procedure }) {
   return (
     <button className="menu-card" type="button" onClick={onClick}>
-      <div className={`menu-card-icon ${alt ? 'alt' : ''} ${brown ? 'brown' : ''} ${lifting ? 'lifting' : ''}`}>{icon}</div>
+      <div className={`menu-card-icon ${alt ? 'alt' : ''} ${brown ? 'brown' : ''} ${lifting ? 'lifting' : ''} ${procedure ? 'procedure' : ''}`}>{icon}</div>
       <div className="menu-card-text">
         <div className="menu-card-title">{title}</div>
         <div className="menu-card-desc">{desc}</div>
@@ -1739,7 +1939,7 @@ function MenuCard({ icon, title, desc, onClick, alt, brown, lifting }) {
   );
 }
 
-function SurveyScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
+function SurveyScreen({ operator, pendingCount, isOnline, onBack, onOpenSurvey, onTheme, onLogout, theme }) {
   return (
     <section>
       <Header title="Encuestas" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
@@ -1755,9 +1955,55 @@ function SurveyScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLog
               key={survey.url}
               icon={`E${index + 1}`}
               title={survey.title}
-              desc="Abrir encuesta externa"
-              onClick={() => openExternalUrl(survey.url)}
+              desc="Registrar apertura y abrir encuesta externa"
+              onClick={() => onOpenSurvey(survey)}
             />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProceduresScreen({ operator, pendingCount, isOnline, onBack, onTheme, onLogout, theme }) {
+  return (
+    <section>
+      <Header title="Procedimientos" operator={operator} pendingCount={pendingCount} isOnline={isOnline} onBack={onBack} onTheme={onTheme} onLogout={onLogout} theme={theme} />
+      <div className="content">
+        <div className="section-heading">
+          <span>Documentos locales</span>
+          <h2>Procedimientos</h2>
+          <p>Los procedimientos se abrirán desde archivos PDF cargados dentro de la aplicación, disponibles sin conexión.</p>
+        </div>
+
+        <div className="procedure-category-list">
+          {PROCEDURE_CATEGORIES.map((category) => (
+            <section className="card procedure-category-card" key={category.id}>
+              <div className="procedure-category-head">
+                <div>
+                  <div className="card-title">{category.title}</div>
+                  <p>{category.description}</p>
+                </div>
+                <span>{category.documents.length}</span>
+              </div>
+
+              {category.documents.length > 0 ? (
+                <div className="procedure-document-list">
+                  {category.documents.map((document) => (
+                    <button className="procedure-document-button" type="button" key={document.id} onClick={() => openLocalProcedurePdf(document.filePath)}>
+                      <span>{document.code || 'PDF'}</span>
+                      <strong>{document.title}</strong>
+                      <small>Abrir PDF local</small>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="procedure-empty-state">
+                  <strong>PDF pendiente de cargar</strong>
+                  <span>Agregue archivos en la carpeta public/procedimientos y registre cada documento en la categoría correspondiente.</span>
+                </div>
+              )}
+            </section>
           ))}
         </div>
       </div>
@@ -2763,6 +3009,7 @@ function AdminScreen({
   onDeleteDocument,
   measurements,
   documents,
+  surveyEvents,
   onBack,
   onTheme,
   theme,
@@ -2813,6 +3060,10 @@ function AdminScreen({
                 <span>Documentos</span>
                 <strong>{documents.length}</strong>
               </div>
+              <div className="admin-kpi-card">
+                <span>Encuestas</span>
+                <strong>{surveyEvents.length}</strong>
+              </div>
             </div>
             <div className="admin-category-tabs">
               <button
@@ -2831,9 +3082,18 @@ function AdminScreen({
                 Conducción
                 <span>{documents.length} documento(s)</span>
               </button>
+              <button
+                className={activeAdminCategory === 'surveys' ? 'active' : ''}
+                type="button"
+                onClick={() => setActiveAdminCategory('surveys')}
+              >
+                Encuestas
+                <span>{surveyEvents.length} registro(s)</span>
+              </button>
             </div>
             {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} onDeleteAll={onDeleteAllMeasurements} />}
             {activeAdminCategory === 'documents' && <AdminDocuments rows={documents} onDeleteDocument={onDeleteDocument} />}
+            {activeAdminCategory === 'surveys' && <AdminSurveyHistory rows={surveyEvents} />}
           </>
         )}
       </div>
@@ -2945,6 +3205,64 @@ function TrashIcon() {
     <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
       <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2l1 11h4l1-11h2l-1.2 13H8.2L7 9Z" />
     </svg>
+  );
+}
+
+function AdminSurveyHistory({ rows }) {
+  const groups = useMemo(() => {
+    const grouped = new Map();
+    for (const row of rows) {
+      const key = row.survey_category || 'sin-categoria';
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(row);
+    }
+    return Array.from(grouped.entries()).map(([category, items]) => ({
+      category,
+      title: SURVEY_LINKS.find((survey) => survey.category === category)?.title || category,
+      items,
+    }));
+  }, [rows]);
+
+  return (
+    <div className="card">
+      <div className="admin-section-head">
+        <div>
+          <div className="card-title">Historial de encuestas</div>
+          <p>Registro de operadores que abrieron encuestas desde la aplicación.</p>
+        </div>
+      </div>
+      {!rows.length && <div className="cond-empty-hint">No hay encuestas registradas.</div>}
+      <div className="admin-survey-groups">
+        {groups.map((group) => (
+          <section className="admin-survey-group" key={group.category}>
+            <div className="admin-survey-group-head">
+              <strong>{group.title}</strong>
+              <span>{group.items.length} registro(s)</span>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha y hora</th>
+                    <th>Usuario</th>
+                    <th>Encuesta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.items.map((row) => (
+                    <tr key={row.id}>
+                      <td>{formatDate(row.opened_at)}</td>
+                      <td>{row.operator_name}</td>
+                      <td>{row.survey_title}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
   );
 }
 

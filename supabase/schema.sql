@@ -35,6 +35,17 @@ create table if not exists public.conduction_documents (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.survey_events (
+  id uuid primary key default gen_random_uuid(),
+  operator_name text not null,
+  survey_category text not null,
+  survey_title text not null,
+  survey_url text not null,
+  owner_id uuid default auth.uid(),
+  opened_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+
 alter table public.conduction_documents
 drop column if exists status;
 
@@ -55,9 +66,11 @@ end $$;
 
 alter table public.irrigation_measurements enable row level security;
 alter table public.conduction_documents enable row level security;
+alter table public.survey_events enable row level security;
 
 revoke all on public.irrigation_measurements from anon;
 revoke all on public.conduction_documents from anon;
+revoke all on public.survey_events from anon;
 grant insert on public.irrigation_measurements to authenticated;
 grant select on public.irrigation_measurements to authenticated;
 grant update on public.irrigation_measurements to authenticated;
@@ -67,6 +80,8 @@ grant select on public.conduction_documents to authenticated;
 grant update on public.conduction_documents to authenticated;
 revoke update on public.conduction_documents from anon;
 grant delete on public.conduction_documents to authenticated;
+grant insert on public.survey_events to authenticated;
+grant select on public.survey_events to authenticated;
 
 drop policy if exists "Public can insert irrigation measurements" on public.irrigation_measurements;
 drop policy if exists "Authenticated users can insert irrigation measurements" on public.irrigation_measurements;
@@ -166,6 +181,26 @@ with check (
   and length(trim(file_path)) between 1 and 500
   and uploaded_at <= now() + interval '1 day'
 );
+
+drop policy if exists "Authenticated users can insert survey events" on public.survey_events;
+create policy "Authenticated users can insert survey events"
+on public.survey_events
+for insert
+to authenticated
+with check (
+  length(trim(operator_name)) between 1 and 120
+  and length(trim(survey_category)) between 1 and 80
+  and length(trim(survey_title)) between 1 and 180
+  and length(trim(survey_url)) between 1 and 500
+  and opened_at <= now() + interval '1 day'
+);
+
+drop policy if exists "Authenticated users can read survey events" on public.survey_events;
+create policy "Authenticated users can read survey events"
+on public.survey_events
+for select
+to authenticated
+using (true);
 
 insert into storage.buckets (id, name, public)
 values ('conduction-documents', 'conduction-documents', false)
