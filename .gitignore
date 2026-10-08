@@ -25,3 +25,7 @@ Thumbs.db
 public/icons/
 public/manifest.webmanifest
 public/sw.js
+
+# Private server credentials for one-time account administration
+.env.admin
+.env.deploy

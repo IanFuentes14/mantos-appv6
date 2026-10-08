@@ -1,5 +1,4 @@
 const MEASUREMENTS_KEY = 'mantos_measurements_queue_v1';
-const DOCUMENTS_KEY = 'mantos_documents_queue_v1';
 const SURVEY_EVENTS_KEY = 'mantos_survey_events_queue_v1';
 const OPERATOR_KEY = 'mantos_operator_name_v1';
 const USER_DB_VALIDATION_KEY = 'mantos_user_db_validation_v1';
@@ -67,21 +66,6 @@ export function addQueuedMeasurement(record) {
   const records = getQueuedMeasurements();
   records.unshift(record);
   saveQueuedMeasurements(records);
-  return records;
-}
-
-export function getQueuedDocuments() {
-  return readList(DOCUMENTS_KEY);
-}
-
-export function saveQueuedDocuments(records) {
-  writeList(DOCUMENTS_KEY, records);
-}
-
-export function addQueuedDocument(record) {
-  const records = getQueuedDocuments();
-  records.unshift(record);
-  saveQueuedDocuments(records);
   return records;
 }
 

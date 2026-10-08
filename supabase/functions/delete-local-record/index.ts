@@ -6,7 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const DOCUMENT_BUCKET = 'conduction-documents';
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function getAllowedAdminEmails() {
@@ -63,7 +62,7 @@ Deno.serve(async (req) => {
   const id = body.id || '';
   const deleteToken = body.deleteToken || '';
 
-  if (!['document', 'measurement', 'measurement_bulk'].includes(kind || '')) {
+  if (!['measurement', 'measurement_bulk'].includes(kind || '')) {
     return jsonResponse({ ok: false, error: 'Tipo de registro invalido.' }, 400);
   }
   if (kind !== 'measurement_bulk' && (!UUID_PATTERN.test(id) || deleteToken.length < 12)) {
@@ -109,24 +108,5 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: true });
   }
 
-  const { data, error } = await supabase
-    .from('conduction_documents')
-    .select('id, delete_token, file_path')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (error) return jsonResponse({ ok: false, error: error.message }, 500);
-  if (!data) return jsonResponse({ ok: false, error: 'El documento no existe en Supabase.' }, 404);
-  if (data.delete_token !== deleteToken) {
-    return jsonResponse({ ok: false, error: 'No autorizado para eliminar este documento.' }, 403);
-  }
-
-  if (data.file_path) {
-    const storageResult = await supabase.storage.from(DOCUMENT_BUCKET).remove([data.file_path]);
-    if (storageResult.error) return jsonResponse({ ok: false, error: storageResult.error.message }, 500);
-  }
-
-  const deleted = await supabase.from('conduction_documents').delete().eq('id', id);
-  if (deleted.error) return jsonResponse({ ok: false, error: deleted.error.message }, 500);
-  return jsonResponse({ ok: true });
+  return jsonResponse({ ok: false, error: 'Tipo de registro invalido.' }, 400);
 });

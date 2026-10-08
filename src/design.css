@@ -1,0 +1,359 @@
+/* Mantos v6.2: visual layer shared by all existing screens. */
+:root {
+  --blue-dark: #14263c;
+  --blue-mid: #006780;
+  --blue-light: #00738f;
+  --blue-pale: #e6f5f9;
+  --blue-accent: #006780;
+  --text-primary: #14263c;
+  --text-secondary: #486079;
+  --text-muted: #486079;
+  --bg: #edf3f8;
+  --bg-card: #ffffff;
+  --surface-strong: #f2f7fb;
+  --border: #afc0ce;
+  --border-strong: #7a94a9;
+  --shadow: 0 8px 24px rgba(16, 43, 70, .06);
+  --input-bg: #f2f7fb;
+  --input-focus-bg: #ffffff;
+  --header-start: #111f36;
+  --header-end: #111f36;
+  --success: #16724c;
+  --success-bg: #e3f5eb;
+  --warning: #855600;
+  --warning-bg: #fff2d5;
+  --danger: #b3261e;
+  --danger-bg: #ffe9e7;
+  --on-action: #ffffff;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+:root[data-theme="dark"] {
+  --blue-dark: #081222;
+  --blue-mid: #35d4f2;
+  --blue-light: #72e4f8;
+  --blue-pale: #0d3244;
+  --blue-accent: #35d4f2;
+  --text-primary: #f1f6fc;
+  --text-secondary: #b0c1d6;
+  --text-muted: #b0c1d6;
+  --bg: #081222;
+  --bg-card: #111f36;
+  --surface-strong: #172940;
+  --border: #2e4762;
+  --border-strong: #63809d;
+  --shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  --input-bg: #172940;
+  --input-focus-bg: #1c344f;
+  --header-start: #111f36;
+  --header-end: #111f36;
+  --success: #66e7ad;
+  --success-bg: #103329;
+  --warning: #ffd37a;
+  --warning-bg: #3a2a0d;
+  --danger: #ffaaa0;
+  --danger-bg: #3a1e22;
+  --on-action: #061724;
+}
+
+body { font-family: "Segoe UI", -apple-system, system-ui, sans-serif; line-height: 1.5; }
+:root[data-theme] .app-shell { background: var(--bg); box-shadow: var(--shadow); }
+:root[data-theme] .app-shell button { min-height: 48px; touch-action: manipulation; transition: background-color 180ms ease, border-color 180ms ease; }
+:root[data-theme] .app-shell button:disabled { cursor: default; opacity: .6; }
+:root[data-theme] .app-shell button:focus-visible, :root[data-theme] .app-shell input:focus-visible, :root[data-theme] .app-shell textarea:focus-visible, :root[data-theme] .app-shell select:focus-visible {
+  outline: 3px solid var(--blue-mid); outline-offset: 3px;
+}
+:root[data-theme] .app-shell .app-header { background: var(--bg-card); border-bottom: 1px solid var(--border); box-shadow: 0 4px 16px rgba(0,0,0,.04); padding-inline: 16px; }
+:root[data-theme] .app-shell .header-top { border: 0; padding: 0; background: transparent; gap: 8px; }
+:root[data-theme] .app-shell .header-logo { border-radius: 12px; background: #ffffff; object-fit: contain; }
+:root[data-theme] .app-shell .theme-toggle, :root[data-theme] .app-shell .user-badge, :root[data-theme] .app-shell .btn-back,
+:root[data-theme] .app-shell .app-header-tool .header-brand-actions > .btn-back {
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface-strong); color: var(--text-primary); font-weight: 600;
+}
+:root[data-theme] .app-shell .app-header-tool .header-brand-actions > .btn-back { background: var(--blue-pale); color: var(--blue-mid); }
+:root[data-theme] .app-shell .header-title { color: var(--text-primary); }
+:root[data-theme] .app-shell .header-subtitle, :root[data-theme] .app-shell .logout-label { color: var(--text-secondary); font-weight: 500; }
+:root[data-theme] .app-shell .user-avatar { background: var(--blue-pale); color: var(--blue-mid); }
+:root[data-theme] .app-shell .theme-toggle-mark { background: var(--blue-mid); box-shadow: none; }
+:root[data-theme] .app-shell .menu-welcome { padding: 24px 20px 4px; }
+:root[data-theme] .app-shell .menu-welcome p { font-size: 22px; line-height: 1.35; font-weight: 700; letter-spacing: -.4px; }
+:root[data-theme] .app-shell .menu-welcome span { display: block; margin-top: 8px; font-size: 14px; font-weight: 400; color: var(--text-secondary); }
+:root[data-theme] .app-shell .menu-list, :root[data-theme] .app-shell .content { padding-inline: 20px; }
+:root[data-theme] .app-shell .menu-list { gap: 12px; }
+:root[data-theme] .app-shell .menu-card { border-width: 1px; min-height: 100px; grid-template-columns: 46px minmax(0,1fr) 20px; gap: 14px; padding: 18px 14px; transform: none; }
+:root[data-theme] .app-shell .menu-card:hover, :root[data-theme] .app-shell .menu-card:active { transform: none; border-color: var(--blue-mid); background: var(--surface-strong); }
+:root[data-theme] .app-shell .menu-card-icon, :root[data-theme] .app-shell .menu-card-icon.alt, :root[data-theme] .app-shell .menu-card-icon.brown,
+:root[data-theme] .app-shell .menu-card-icon.lifting, :root[data-theme] .app-shell .menu-card-icon.procedure {
+  width: 46px; height: 46px; border-radius: 12px; background: var(--blue-pale); color: var(--blue-mid); box-shadow: none;
+}
+.menu-card-icon svg, .menu-card-arrow svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+:root[data-theme] .app-shell .menu-card-title { font-size: 16px; font-weight: 700; line-height: 1.35; }
+:root[data-theme] .app-shell .menu-card-desc { margin-top: 5px; font-size: 13px; line-height: 1.5; font-weight: 400; }
+:root[data-theme] .app-shell .menu-card-arrow { width: 20px; height: 24px; background: transparent; color: var(--text-secondary); }
+:root[data-theme] .app-shell .menu-card-arrow svg { width: 18px; }
+:root[data-theme] .app-shell .card, :root[data-theme] .app-shell .timer-card, :root[data-theme] .app-shell .record-item, :root[data-theme] .app-shell .term-card,
+:root[data-theme] .app-shell .quiz-card, :root[data-theme] .app-shell .stat-box, :root[data-theme] .app-shell .admin-kpi-card,
+:root[data-theme] .app-shell .modal-box, :root[data-theme] .app-shell .quick-card { border-width: 1px; border-radius: 16px; }
+:root[data-theme] .app-shell .card { padding: 18px; margin-bottom: 16px; }
+:root[data-theme] .app-shell .card-title { color: var(--blue-mid); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+:root[data-theme] .app-shell label { color: var(--text-secondary); font-size: 13px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+:root[data-theme] .app-shell input[type], :root[data-theme] .app-shell textarea, :root[data-theme] .app-shell .form-group select {
+  border-width: 1px; border-radius: 10px; background: var(--input-bg); color: var(--text-primary); font-weight: 500; font-size: 16px;
+}
+:root[data-theme] .app-shell input:focus, :root[data-theme] .app-shell textarea:focus, :root[data-theme] .app-shell .form-group select:focus {
+  border-color: var(--blue-mid); background: var(--input-focus-bg); box-shadow: none;
+}
+:root[data-theme] .app-shell .btn-login, :root[data-theme] .app-shell .btn-save, :root[data-theme] .app-shell .btn-share-report, :root[data-theme] .app-shell .main-button {
+  border: 1px solid var(--blue-mid); border-radius: 12px; background: var(--blue-mid); color: var(--on-action); box-shadow: none; font-weight: 700;
+}
+:root[data-theme] .app-shell .btn-secondary, :root[data-theme] .app-shell .quiz-actions button { background: var(--surface-strong); border-width: 1px; color: var(--text-primary); font-weight: 600; border-radius: 12px; }
+:root[data-theme] .app-shell .tabs, :root[data-theme] .app-shell .admin-category-tabs, :root[data-theme] .app-shell .glosario-mode-tabs { background: var(--surface-strong); border-width: 1px; border-radius: 12px; gap: 8px; }
+:root[data-theme] .app-shell .tab, :root[data-theme] .app-shell .admin-category-tabs button, :root[data-theme] .app-shell .glosario-mode-tabs button { font-weight: 600; border-radius: 9px; }
+:root[data-theme] .app-shell .tab.active, :root[data-theme] .app-shell .admin-category-tabs button.active, :root[data-theme] .app-shell .glosario-mode-tabs button.active {
+  color: var(--blue-mid); background: var(--blue-pale); border: 1px solid var(--blue-mid);
+}
+:root[data-theme] .app-shell .tasa-card { background: var(--blue-pale); border: 1px solid var(--blue-mid); border-radius: 16px; box-shadow: none; }
+:root[data-theme] .app-shell .tasa-label, :root[data-theme] .app-shell .tasa-value, :root[data-theme] .app-shell .tasa-unit { color: var(--blue-mid); }
+:root[data-theme] .app-shell .tasa-value { font-size: 44px; font-weight: 700; line-height: 1.2; letter-spacing: -1px; }
+:root[data-theme] .app-shell .tasa-formula { color: var(--text-secondary); font-weight: 400; }
+:root[data-theme] .app-shell .tasa-icon { background: var(--surface-strong); color: var(--blue-mid); border: 1px solid var(--border); }
+:root[data-theme] .app-shell .tasa-value, :root[data-theme] .app-shell .timer-value, :root[data-theme] .app-shell .weight-result strong, :root[data-theme] .app-shell .weight-result-grid strong, :root[data-theme] .app-shell .record-tasa { font-variant-numeric: tabular-nums; }
+:root[data-theme] .app-shell .timer-value, :root[data-theme] .app-shell .weight-result strong, :root[data-theme] .app-shell .weight-result-grid strong, :root[data-theme] .app-shell .record-tasa { color: var(--blue-mid); }
+:root[data-theme] .app-shell .timer-card.complete .timer-value { color: var(--success); }
+:root[data-theme] .app-shell .vol-result { background: var(--surface-strong); color: var(--text-secondary); font-weight: 500; }
+:root[data-theme] .app-shell .vol-result strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+:root[data-theme] .app-shell .procedure-empty-state { border-width: 1px; border-radius: 12px; }
+:root[data-theme] .app-shell .procedure-empty-state span, :root[data-theme] .app-shell .procedure-category-head p { font-weight: 400; }
+:root[data-theme] .app-shell .procedure-category-head > span, :root[data-theme] .app-shell .procedure-document-button { border-width: 1px; border-radius: 10px; }
+:root[data-theme] .app-shell .procedure-document-button > span { color: var(--on-action); }
+:root[data-theme] .app-shell .lifting-overview, :root[data-theme] .app-shell .formula-accordion-item { border-radius: 16px; border-width: 1px; }
+:root[data-theme] .app-shell .lifting-overview { border-left-width: 3px; }
+:root[data-theme] .app-shell .lifting-menu button { border-width: 1px; border-radius: 12px; }
+:root[data-theme] .app-shell .lifting-menu button.active { background: var(--blue-pale); color: var(--blue-mid); border-color: var(--blue-mid); }
+:root[data-theme] .app-shell .lifting-menu button.active::before { background: var(--blue-mid); }
+:root[data-theme] .app-shell .lifting-menu-index, :root[data-theme] .app-shell .lifting-menu button.active .lifting-menu-index { background: var(--surface-strong); border-color: var(--border); color: var(--blue-mid); }
+:root[data-theme] .app-shell .lifting-menu button.active .lifting-menu-copy small { color: var(--text-secondary); }
+:root[data-theme] .app-shell .lifting-menu button.active .lifting-menu-state { color: var(--blue-mid); }
+:root[data-theme] .app-shell .lifting-menu-copy strong, :root[data-theme] .app-shell .formula-accordion-header, :root[data-theme] .app-shell .term-card-title { font-weight: 700; }
+:root[data-theme] .app-shell .lifting-menu-copy small { font-size: 12px; font-weight: 400; }
+:root[data-theme] .app-shell .section-heading h2 { font-size: 24px; letter-spacing: -.4px; font-weight: 700; }
+:root[data-theme] .app-shell .section-heading p, :root[data-theme] .app-shell .term-card-body-inner, :root[data-theme] .app-shell .formula-description { font-weight: 400; line-height: 1.5; }
+:root[data-theme] .app-shell .sync-status-banner.sincronizando { color: var(--blue-mid); }
+
+/* Keep login controls consistent while preserving every access option. */
+#login-screen { background: var(--bg); min-height: 100dvh; }
+#login-screen .login-welcome h1 { color: var(--text-primary); text-shadow: none; font-size: 36px; font-weight: 700; letter-spacing: -.5px; }
+#login-screen .login-welcome p { color: var(--text-secondary); font-size: 16px; font-weight: 400; }
+#login-screen .login-company-name { color: var(--text-primary); text-shadow: none; font-size: 22px; font-weight: 700; letter-spacing: 0; text-transform: none; }
+#login-screen .login-logo-wrap { border: 1px solid var(--border); border-radius: 20px; background: #ffffff; box-shadow: var(--shadow); }
+#login-screen .login-divider { background: var(--border); }
+#login-screen .login-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px; color: var(--text-primary); box-shadow: var(--shadow); }
+#login-screen .login-card.access-card { padding: 16px; }
+#login-screen .login-card .login-form-title, #login-screen .login-card label, #login-screen .login-card .login-hint { color: var(--text-secondary); font-weight: 500; }
+#login-screen .login-card input { background: var(--input-bg); border-color: var(--border); color: var(--text-primary); }
+#login-screen .login-card input::placeholder { color: var(--text-muted); }
+#login-screen .login-card .access-button { min-height: 56px; border-radius: 12px; font-size: 16px; font-weight: 700; }
+#login-screen .login-card .access-button:first-child, #login-screen .login-card .access-button.secondary-gradient {
+  background: var(--blue-mid); border: 1px solid var(--blue-mid); color: var(--on-action); box-shadow: none;
+}
+#login-screen .login-card .login-theme-toggle { background: var(--surface-strong); border: 1px solid var(--border); border-radius: 12px; color: var(--text-primary); font-weight: 600; }
+#login-screen .login-card .theme-toggle-mark { background: var(--blue-mid); box-shadow: none; }
+
+@media (max-width: 520px) {
+  :root[data-theme] .app-shell .menu-list, :root[data-theme] .app-shell .content { padding-inline: 16px; }
+  :root[data-theme] .app-shell .menu-welcome { padding-inline: 16px; }
+  :root[data-theme] .app-shell .app-header-tool .header-top { flex-wrap: wrap; row-gap: 8px; }
+  :root[data-theme] .app-shell .header-brand-actions { flex-wrap: wrap; }
+  :root[data-theme] .app-shell .header-menu-right { min-width: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme] .app-shell button { transition: none; }
+}
+/* Geometry calculator: scoped to the lifting weight workspace. */
+:root[data-theme] .app-shell .weight-workspace h3 { margin: 0; color: var(--text-primary); font-family: inherit; font-size: 18px; }
+:root[data-theme] .app-shell .weight-shape-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+:root[data-theme] .app-shell .weight-shape-option { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 150px; padding: 12px 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-strong); color: var(--text-secondary); cursor: pointer; transition: background .18s, border-color .18s; }
+:root[data-theme] .app-shell .weight-shape-option.selected { border: 2px solid var(--blue-mid); padding: 11px 7px; background: var(--blue-pale); color: var(--blue-mid); }
+:root[data-theme] .app-shell .weight-shape-option strong { font-size: 16px; }
+:root[data-theme] .app-shell .weight-shape-option small { font-size: 12px; color: var(--text-secondary); }
+:root[data-theme] .app-shell .weight-shape-image { width: 80px; height: 68px; flex-shrink: 0; color: var(--blue-mid); }
+:root[data-theme] .app-shell .weight-selected-tag { font-size: 12px; font-weight: 700; }
+:root[data-theme] .app-shell .weight-detail-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+:root[data-theme] .app-shell .weight-geometry-summary { display: flex; align-items: center; gap: 12px; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+:root[data-theme] .app-shell .weight-geometry-summary p, :root[data-theme] .app-shell .weight-field-hint { font-size: 13px; line-height: 1.5; color: var(--text-secondary); margin: 8px 0; }
+:root[data-theme] .app-shell .weight-segment { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+:root[data-theme] .app-shell .weight-segment button { min-height: 48px; min-width: 48px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 10px; color: var(--text-secondary); background: var(--surface-strong); cursor: pointer; }
+:root[data-theme] .app-shell .weight-segment button.active { background: var(--blue-pale); color: var(--blue-mid); border-color: var(--blue-mid); font-weight: 700; }
+:root[data-theme] .app-shell .weight-unit-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+:root[data-theme] .app-shell .weight-unit-row > span { font-weight: 600; font-size: 14px; }
+:root[data-theme] .app-shell .weight-unit-row .weight-segment { margin-bottom: 0; }
+:root[data-theme] .app-shell .weight-dimension-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+:root[data-theme] .app-shell .weight-dimension-grid .form-group { margin: 0; min-width: 0; }
+:root[data-theme] .app-shell .weight-workspace input[aria-invalid="true"] { border-color: var(--danger, #b42318); }
+:root[data-theme] .app-shell .weight-input-error { color: var(--danger, #b42318); font-size: 13px; margin: 8px 0 0; line-height: 1.5; }
+:root[data-theme] .app-shell .weight-output-card { border: 1px solid var(--blue-mid); background: var(--blue-pale); }
+:root[data-theme] .app-shell .weight-output-eyebrow { display: block; color: var(--blue-mid); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 8px; }
+:root[data-theme] .app-shell .weight-primary-result { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; color: var(--blue-mid); margin-top: 24px; }
+:root[data-theme] .app-shell .weight-primary-result strong { font-size: clamp(28px, 5vw, 40px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.2; }
+:root[data-theme] .app-shell .weight-primary-result span { font-size: 20px; }
+:root[data-theme] .app-shell .weight-tonnes { color: var(--text-secondary); font-size: 16px; margin: 8px 0 24px; }
+:root[data-theme] .app-shell .weight-breakdown { display: grid; gap: 12px; margin: 0; }
+:root[data-theme] .app-shell .weight-breakdown > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+:root[data-theme] .app-shell .weight-breakdown dt { color: var(--text-secondary); }
+:root[data-theme] .app-shell .weight-breakdown dd { margin: 0; font-weight: 600; color: var(--text-primary); overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .weight-result-placeholder { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 24px 0; gap: 12px; }
+:root[data-theme] .app-shell .weight-result-placeholder p, :root[data-theme] .app-shell .weight-calculation-note p { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin: 0; }
+:root[data-theme] .app-shell .weight-calculation-note { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+:root[data-theme] .app-shell .weight-calculation-note strong { display: block; margin-bottom: 8px; font-size: 14px; }
+:root[data-theme] .app-shell .weight-workspace button:focus-visible { outline: 3px solid var(--blue-mid); outline-offset: 3px; }
+:root[data-theme] .app-shell .weight-workspace button:active { background: var(--blue-pale); }
+@media (max-width: 600px) {
+  :root[data-theme] .app-shell .weight-shape-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  :root[data-theme] .app-shell .weight-detail-grid, :root[data-theme] .app-shell .weight-dimension-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) { :root[data-theme] .app-shell .weight-shape-option { transition: none; } }
+
+/* Lift assessment uses the weight calculator's theme and readable touch controls. */
+:root[data-theme] .app-shell .lift-workspace { min-width: 0; }
+:root[data-theme] .app-shell .lift-workspace h3 { margin: 0; font-family: inherit; font-size: 20px; line-height: 1.4; color: var(--text-primary); }
+:root[data-theme] .app-shell .lift-step { margin-bottom: 16px; }
+:root[data-theme] .app-shell .lift-step-heading { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+:root[data-theme] .app-shell .lift-step-heading > span { display: grid; place-items: center; flex: 0 0 40px; height: 40px; border-radius: 12px; color: var(--blue-mid); background: var(--blue-pale); font-size: 14px; font-weight: 700; }
+:root[data-theme] .app-shell .lift-hint { color: var(--text-secondary); line-height: 1.6; font-size: 14px; margin: 8px 0 16px; }
+:root[data-theme] .app-shell .lift-choices { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 16px; }
+:root[data-theme] .app-shell .lift-choices button, :root[data-theme] .app-shell .lift-hitches button { min-height: 48px; min-width: 48px; border: 2px solid var(--border); border-radius: 12px; padding: 12px 16px; color: var(--text-secondary); background: var(--surface-strong); font-family: inherit; font-size: 16px; cursor: pointer; transition: background .18s, border-color .18s; }
+:root[data-theme] .app-shell .lift-choices button.selected, :root[data-theme] .app-shell .lift-hitches button.selected, :root[data-theme] .app-shell .lift-choices button[aria-pressed="true"] { border-color: var(--blue-mid); color: var(--blue-mid); background: var(--blue-pale); font-weight: 700; }
+:root[data-theme] .app-shell .lift-choices button:hover, :root[data-theme] .app-shell .lift-hitches button:hover { border-color: var(--blue-mid); }
+:root[data-theme] .app-shell .lift-workspace button:focus-visible, :root[data-theme] .app-shell .lift-workspace summary:focus-visible, :root[data-theme] .app-shell .lift-workspace a:focus-visible { outline: 3px solid var(--blue-mid); outline-offset: 3px; }
+:root[data-theme] .app-shell .lift-workspace button:active { filter: brightness(.95); }
+:root[data-theme] .app-shell .lift-quantity { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; align-items: center; padding-top: 16px; border-top: 1px solid var(--border); }
+:root[data-theme] .app-shell .lift-hitches { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-bottom: 24px; }
+:root[data-theme] .app-shell .lift-hitches button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-inline: 8px; }
+:root[data-theme] .app-shell .lift-hitches small { font-size: 13px; color: var(--text-secondary); }
+:root[data-theme] .app-shell .lift-hitch-image { width: 104px; max-width: 100%; height: 88px; color: var(--blue-mid); }
+:root[data-theme] .app-shell .lift-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin-top: 16px; }
+:root[data-theme] .app-shell .lift-fields .form-group { margin: 0; min-width: 0; }
+:root[data-theme] .app-shell .lift-workspace input:not([type="checkbox"]), :root[data-theme] .app-shell .lift-workspace select { min-height: 48px; width: 100%; font-size: 16px; }
+:root[data-theme] .app-shell .lift-workspace input[aria-invalid="true"] { border-color: var(--danger); }
+:root[data-theme] .app-shell .lift-confirm { display: flex; align-items: center; gap: 12px; padding: 12px; margin-top: 12px; min-height: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-strong); font-size: 14px; line-height: 1.6; cursor: pointer; }
+:root[data-theme] .app-shell .lift-confirm input { width: 22px; height: 22px; flex-shrink: 0; margin: 0; accent-color: var(--blue-mid); }
+:root[data-theme] .app-shell .lift-note { padding: 12px 16px; background: var(--warning-bg); color: var(--warning); border-radius: 12px; line-height: 1.6; font-size: 14px; }
+:root[data-theme] .app-shell .lift-angle { display: grid; grid-template-columns: 160px minmax(0,1fr); gap: 20px; align-items: center; padding-top: 24px; margin-top: 24px; border-top: 1px solid var(--border); }
+:root[data-theme] .app-shell .lift-angle-image { width: 100%; color: var(--blue-mid); }
+:root[data-theme] .app-shell .lift-chart-info { padding: 16px; margin: 16px 0; border: 1px solid var(--border); background: var(--surface-strong); border-radius: 12px; }
+:root[data-theme] .app-shell .lift-chart-info p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin: 8px 0; }
+:root[data-theme] .app-shell .lift-chart-info a { display: inline-flex; align-items: center; min-height: 48px; color: var(--blue-mid); font-size: 14px; text-decoration: underline; }
+:root[data-theme] .app-shell .lift-chart-capacity { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 16px; border-radius: 12px; background: var(--blue-pale); color: var(--blue-mid); }
+:root[data-theme] .app-shell .lift-chart-capacity strong { font-size: 24px; }
+:root[data-theme] .app-shell .lift-accessories { border-top: 1px solid var(--border); padding-top: 8px; }
+:root[data-theme] .app-shell .lift-accessories summary { min-height: 48px; padding-block: 12px; cursor: pointer; font-weight: 600; color: var(--text-primary); }
+:root[data-theme] .app-shell .lift-calculate { display: block; width: 100%; min-height: 52px; margin-top: 20px; padding: 14px 20px; border: none; border-radius: 12px; background: var(--blue-mid); color: var(--on-accent, var(--bg-card)); font-size: 16px; font-weight: 700; cursor: pointer; }
+:root[data-theme] .app-shell .lift-result.within { border-color: var(--success); }
+:root[data-theme] .app-shell .lift-result.exceeded { border-color: var(--danger); }
+:root[data-theme] .app-shell .lift-result.within > h3 { color: var(--success); }
+:root[data-theme] .app-shell .lift-result.exceeded > h3 { color: var(--danger); }
+:root[data-theme] .app-shell .lift-result ul { padding-left: 24px; color: var(--text-secondary); line-height: 1.6; }
+:root[data-theme] .app-shell .lift-result-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 24px 0; }
+:root[data-theme] .app-shell .lift-result-system { border: 1px solid var(--border); border-radius: 14px; padding: 16px; background: var(--surface-strong); }
+:root[data-theme] .app-shell .lift-result-system > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; }
+:root[data-theme] .app-shell .lift-result-system span { font-size: 13px; font-weight: 600; }
+:root[data-theme] .app-shell .lift-result-system.pass span { color: var(--success); }
+:root[data-theme] .app-shell .lift-result-system.fail span { color: var(--danger); }
+:root[data-theme] .app-shell .lift-result-system p { color: var(--text-secondary); line-height: 1.5; }
+:root[data-theme] .app-shell .lift-result-system p strong { color: var(--text-primary); font-size: 22px; }
+:root[data-theme] .app-shell .lift-result-system meter { width: 100%; height: 18px; }
+:root[data-theme] .app-shell .lift-result-system small { display: block; color: var(--text-secondary); margin-top: 8px; }
+:root[data-theme] .app-shell .lift-capacity-table { width: 100%; min-width: 0; border-collapse: collapse; margin: 20px 0; font-variant-numeric: tabular-nums; }
+:root[data-theme] .app-shell .lift-capacity-table caption { text-align: left; font-weight: 600; padding: 12px 0; }
+:root[data-theme] .app-shell .lift-capacity-table th, :root[data-theme] .app-shell .lift-capacity-table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+:root[data-theme] .app-shell .lift-capacity-table th { background: var(--surface-strong); }
+@media (max-width:600px) {
+  :root[data-theme] .app-shell .lift-fields, :root[data-theme] .app-shell .lift-result-grid { grid-template-columns: minmax(0,1fr); }
+  :root[data-theme] .app-shell .lift-hitches { gap: 8px; }
+  :root[data-theme] .app-shell .lift-hitches button { overflow-wrap: anywhere; }
+  :root[data-theme] .app-shell .lift-angle { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  :root[data-theme] .app-shell .lift-angle-image { max-width: 200px; margin: auto; }
+  :root[data-theme] .app-shell .lift-hitches small { display: none; }
+}
+@media (prefers-reduced-motion:reduce) { :root[data-theme] .app-shell .lift-workspace button { transition: none; } }
+
+/* Administration shares the geometry calculator's surfaces and visual hierarchy. */
+:root[data-theme] .app-shell .procedure-editor { border: 1px solid var(--border); background: var(--surface-strong); border-radius: 16px; padding: 20px; }
+:root[data-theme] .app-shell .procedure-editor-head, :root[data-theme] .app-shell .procedure-list-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+:root[data-theme] .app-shell .procedure-editor h4, :root[data-theme] .app-shell .procedure-list-heading h4 { margin: 0; font: inherit; font-weight: 700; color: var(--text-primary); }
+:root[data-theme] .app-shell .procedure-editor-head span, :root[data-theme] .app-shell .procedure-list-heading > span { font-size: 12px; color: var(--blue-mid); background: var(--blue-pale); padding: 4px 8px; border-radius: 8px; }
+:root[data-theme] .app-shell .procedure-file-picker { border: 1px dashed var(--blue-mid); background: var(--blue-pale); border-radius: 12px; padding: 16px; margin: 16px 0; }
+:root[data-theme] .app-shell .procedure-file-picker label, :root[data-theme] .app-shell .procedure-file-picker small { display: block; margin-bottom: 8px; color: var(--text-secondary); font-size: 13px; overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .procedure-file-picker input { width: 100%; min-width: 0; }
+:root[data-theme] .app-shell .procedure-editor-actions, :root[data-theme] .app-shell .procedure-document-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+:root[data-theme] .app-shell .procedure-helper { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 12px 0; }
+:root[data-theme] .app-shell .procedure-list-heading { margin-top: 24px; }
+:root[data-theme] .app-shell .procedure-admin-document { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; margin-top: 12px; background: var(--surface-strong); }
+:root[data-theme] .app-shell .procedure-admin-document > div { min-width: 0; }
+:root[data-theme] .app-shell .procedure-admin-document strong { display: block; color: var(--text-primary); font-size: 15px; overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .procedure-admin-document small { display: block; color: var(--text-secondary); font-size: 12px; margin-top: 6px; overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .procedure-admin-document button { font-size: 13px; padding: 10px 12px; }
+:root[data-theme] .app-shell .procedure-retire { color: var(--danger); background: var(--danger-bg); border: 1px solid var(--danger); border-radius: 10px; }
+:root[data-theme] .app-shell .procedure-sync-button { width: 100%; margin-top: 20px; }
+:root[data-theme] .app-shell .procedure-feedback { padding: 12px 16px; border: 1px solid var(--border); background: var(--surface-strong); color: var(--text-secondary); border-radius: 12px; font-size: 14px; line-height: 1.5; margin: 16px 0; }
+:root[data-theme] .app-shell .procedure-user-sync-button { display: inline-flex; width: auto; max-width: 100%; min-height: 40px; align-items: center; justify-content: center; padding: 8px 14px; margin: 0 0 12px; border-radius: 10px; font-size: 12px; line-height: 1.3; text-align: center; white-space: normal; }
+:root[data-theme] .app-shell .procedure-draft-error { font-size: 13px; color: var(--danger); overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .admin-workspace h3 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; font-family: inherit; color: var(--text-primary); }
+:root[data-theme] .app-shell .admin-session-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+:root[data-theme] .app-shell .admin-session-copy { display: flex; align-items: center; gap: 12px; min-width: 0; }
+:root[data-theme] .app-shell .admin-session-copy > div { min-width: 0; }
+:root[data-theme] .app-shell .admin-session-copy span:not(.admin-icon-tile) { display: block; color: var(--text-secondary); font-size: 12px; margin-bottom: 4px; }
+:root[data-theme] .app-shell .admin-session-copy strong { font-size: 15px; color: var(--text-primary); overflow-wrap: anywhere; }
+:root[data-theme] .app-shell .admin-workspace svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+:root[data-theme] .app-shell .admin-icon-tile { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid var(--border); border-radius: 12px; background: var(--blue-pale); color: var(--blue-mid); flex-shrink: 0; }
+:root[data-theme] .app-shell .admin-refresh, :root[data-theme] .app-shell .admin-export-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin: 0; min-height: 48px; font-size: 14px; }
+:root[data-theme] .app-shell .admin-module-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+:root[data-theme] .app-shell .admin-module-nav > button { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 12px; padding: 16px; min-width: 0; border: 1px solid var(--border); border-radius: 16px; color: var(--text-primary); background: var(--bg-card); cursor: pointer; }
+:root[data-theme] .app-shell .admin-module-nav > button.active { border-color: var(--blue-mid); background: var(--blue-pale); box-shadow: inset 0 0 0 1px var(--blue-mid); }
+:root[data-theme] .app-shell .admin-module-copy strong, :root[data-theme] .app-shell .admin-module-copy small { display: block; }
+:root[data-theme] .app-shell .admin-module-copy strong { font-size: 16px; margin-bottom: 4px; }
+:root[data-theme] .app-shell .admin-module-copy small { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+:root[data-theme] .app-shell .admin-module-state { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+:root[data-theme] .app-shell .admin-module-nav > button.active .admin-module-state, :root[data-theme] .app-shell .admin-module-nav > button.active strong { color: var(--blue-mid); }
+:root[data-theme] .app-shell .admin-workspace button:focus-visible, :root[data-theme] .app-shell .admin-maintenance summary:focus-visible { outline: 3px solid var(--blue-mid); outline-offset: 3px; }
+:root[data-theme] .app-shell .admin-module-nav > button:active { background: var(--surface-strong); }
+:root[data-theme] .app-shell .admin-section-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+:root[data-theme] .app-shell .admin-section-eyebrow { display: block; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--blue-mid); margin-bottom: 8px; }
+:root[data-theme] .app-shell .admin-section-head p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+:root[data-theme] .app-shell .admin-section-actions { display: flex; gap: 8px; margin: 0; }
+:root[data-theme] .app-shell .admin-record-table { border: 1px solid var(--border); border-radius: 12px; }
+:root[data-theme] .app-shell .admin-record-table table { width: 100%; border-collapse: collapse; font-size: 14px; }
+:root[data-theme] .app-shell .admin-record-table th { background: var(--surface-strong); color: var(--text-secondary); font-size: 12px; text-transform: none; letter-spacing: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+:root[data-theme] .app-shell .admin-record-table td { background: var(--bg-card); color: var(--text-primary); padding: 16px; border-bottom: 1px solid var(--border); line-height: 1.5; }
+:root[data-theme] .app-shell .admin-record-table tr:last-child td { border-bottom: 0; }
+:root[data-theme] .app-shell .admin-rate-cell strong { display: inline-block; padding: 6px 10px; border-radius: 8px; background: var(--blue-pale); color: var(--blue-mid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+:root[data-theme] .app-shell .admin-maintenance { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+:root[data-theme] .app-shell .admin-maintenance summary { padding: 12px 0; min-height: 48px; cursor: pointer; color: var(--text-secondary); font-size: 14px; font-weight: 600; }
+:root[data-theme] .app-shell .admin-maintenance > div { padding-top: 8px; }
+:root[data-theme] .app-shell .admin-maintenance p { color: var(--text-secondary); font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
+:root[data-theme] .app-shell .admin-delete-all-button { min-height: 48px; width: auto; padding: 12px 16px; margin: 0; color: var(--danger); background: var(--danger-bg); border: 1px solid var(--danger); border-radius: 12px; font-size: 14px; font-weight: 600; }
+:root[data-theme] .app-shell .admin-survey-groups { gap: 20px; }
+:root[data-theme] .app-shell .admin-survey-group { padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-strong); }
+:root[data-theme] .app-shell .admin-survey-group-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+:root[data-theme] .app-shell .admin-survey-group-head strong { color: var(--text-primary); font-size: 16px; }
+:root[data-theme] .app-shell .admin-survey-group-head span { background: var(--blue-pale); color: var(--blue-mid); font-size: 12px; padding: 4px 8px; border-radius: 8px; }
+:root[data-theme] .app-shell .admin-document-pending { display: flex; gap: 16px; align-items: flex-start; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-strong); }
+:root[data-theme] .app-shell .admin-document-pending strong { display: block; font-size: 16px; }
+:root[data-theme] .app-shell .admin-document-pending p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
+@media (max-width: 600px) {
+  :root[data-theme] .app-shell .admin-module-nav { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  :root[data-theme] .app-shell .admin-module-nav > button { flex-direction: row; align-items: center; gap: 12px; }
+  :root[data-theme] .app-shell .admin-module-copy { flex: 1; min-width: 0; }
+  :root[data-theme] .app-shell .admin-session-copy { width: 100%; }
+  :root[data-theme] .app-shell .admin-refresh { width: 100%; }
+  :root[data-theme] .app-shell .admin-record-table { border: 0; overflow: visible; }
+  :root[data-theme] .app-shell .admin-record-table table, :root[data-theme] .app-shell .admin-record-table tbody { display: block; min-width: 0; }
+  :root[data-theme] .app-shell .admin-record-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  :root[data-theme] .app-shell .admin-record-table tbody { display: grid; gap: 12px; }
+  :root[data-theme] .app-shell .admin-record-table tr { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-strong); }
+  :root[data-theme] .app-shell .admin-record-table td { display: grid; gap: 4px; padding: 0; border: 0; background: transparent; white-space: normal; overflow-wrap: anywhere; }
+  :root[data-theme] .app-shell .admin-record-table td::before { content: attr(data-label); font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  :root[data-theme] .app-shell .admin-rate-cell strong { justify-self: start; }
+  :root[data-theme] .app-shell .admin-document-pending { flex-direction: column; padding: 16px; }
+}
