@@ -1,4 +1,5 @@
 import AdminProcedures from './components/AdminProcedures';
+import SurveyHistoryDelete from './components/SurveyHistoryDelete';
 import ProcedureLibrary from './components/ProcedureLibrary';
 import { useProcedures } from './lib/useProcedures';
 import LiftingWeightCalculator from './components/LiftingWeightCalculator';
@@ -674,7 +675,7 @@ function calculateBoomGeometry(longitud_pluma, radio_operacion) {
   };
 }
 
-function App() {
+function App({ initialTheme } = {}) {
   const [operator, setOperator] = useState('');
   const [accessRole, setAccessRole] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -693,7 +694,7 @@ function App() {
   const [syncing, setSyncing] = useState(false);
   const [syncUiStatus, setSyncUiStatus] = useState('idle');
   const [checkingUserAccess, setCheckingUserAccess] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('mantos_theme') || 'light');
+  const [theme, setTheme] = useState(() => initialTheme || localStorage.getItem('mantos_theme') || 'light');
 
   const procedures = useProcedures({ accessRole, session, isOnline });
   const canUseSupabase = isSupabaseConfigured && supabase;
@@ -1085,6 +1086,13 @@ function App() {
     }
   }
 
+  async function refreshAfterSurveyDelete(category) {
+    const remaining = getQueuedSurveyEvents().filter(record => record.syncStatus !== 'synced' || (category !== undefined && (category === '__uncategorized' ? Boolean(record.category) : record.category !== category)));
+    saveQueuedSurveyEvents(remaining);
+    setSurveyEvents(remaining);
+    await loadAdminData();
+  }
+
   async function deleteAllAdminMeasurements() {
     if (!session || !canUseSupabase || !navigator.onLine) {
       setMessage('Se requiere una sesion administrativa con conexion para eliminar todas las tasas.');
@@ -1345,6 +1353,7 @@ function App() {
           onLogout={closeSession}
           onRefresh={loadAdminData}
           onDeleteAllMeasurements={deleteAllAdminMeasurements}
+          onSurveyDeleted={refreshAfterSurveyDelete}
           measurements={adminMeasurements}
           surveyEvents={adminSurveyEvents}
           onBack={() => setScreen(accessRole === 'admin' ? 'menu' : 'login')}
@@ -2447,6 +2456,7 @@ function AdminScreen({
   onLogout,
   onRefresh,
   onDeleteAllMeasurements,
+  onSurveyDeleted,
   measurements,
   surveyEvents,
   onBack,
@@ -2508,7 +2518,7 @@ function AdminScreen({
             </nav>
             <div id="admin-active-panel">
             {activeAdminCategory === 'measurements' && <AdminMeasurements rows={measurements} onDeleteAll={onDeleteAllMeasurements} />}
-            {activeAdminCategory === 'surveys' && <AdminSurveyHistory rows={surveyEvents} />}
+            {activeAdminCategory === 'surveys' && <AdminSurveyHistory rows={surveyEvents} onDeleted={onSurveyDeleted} isOnline={isOnline} />}
             {activeAdminCategory === 'procedures' && <AdminProcedures procedures={procedures} session={session} isOnline={isOnline} />}
             </div>
           </>
@@ -2632,7 +2642,7 @@ function TrashIcon() {
   );
 }
 
-function AdminSurveyHistory({ rows }) {
+function AdminSurveyHistory({ rows, onDeleted, isOnline }) {
   const groups = useMemo(() => {
     const grouped = new Map();
     for (const row of rows) {
@@ -2655,6 +2665,7 @@ function AdminSurveyHistory({ rows }) {
           <h3>Historial de encuestas</h3>
           <p>Registro de operadores que abrieron encuestas desde la aplicación.</p>
         </div>
+        <SurveyHistoryDelete disabled={!rows.length || !isOnline} onDeleted={onDeleted} />
       </div>
       {!rows.length && <div className="cond-empty-hint">No hay encuestas registradas.</div>}
       <div className="admin-survey-groups">
@@ -2664,6 +2675,7 @@ function AdminSurveyHistory({ rows }) {
               <strong>{group.title}</strong>
               <span>{group.items.length} registro(s)</span>
             </div>
+            <SurveyHistoryDelete category={group.category === 'sin-categoria' ? '__uncategorized' : group.category} title={group.title} disabled={!isOnline} onDeleted={onDeleted} />
             <div className="table-wrap admin-record-table">
               <table>
                 <thead>

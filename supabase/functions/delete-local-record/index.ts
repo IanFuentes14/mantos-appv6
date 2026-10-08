@@ -21,7 +21,7 @@ async function assertAdminRequest(req: Request, supabase: ReturnType<typeof crea
   if (!token) return { ok: false, error: 'Sesion administrativa requerida.' };
 
   const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user?.email) return { ok: false, error: 'Sesion administrativa invalida.' };
+  if (error || !data.user?.email || data.user.is_anonymous) return { ok: false, error: 'Sesion administrativa invalida.' };
 
   const email = data.user.email.toLowerCase();
   if (!getAllowedAdminEmails().includes(email)) {
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, error: 'Variables de Supabase no disponibles en la funcion.' }, 500);
   }
 
-  let body: { kind?: string; id?: string; deleteToken?: string };
+  let body: { kind?: string; id?: string; deleteToken?: string; category?: string };
   try {
     body = await req.json();
   } catch (_error) {
@@ -62,10 +62,10 @@ Deno.serve(async (req) => {
   const id = body.id || '';
   const deleteToken = body.deleteToken || '';
 
-  if (!['measurement', 'measurement_bulk'].includes(kind || '')) {
+  if (!['measurement', 'measurement_bulk', 'survey_bulk'].includes(kind || '')) {
     return jsonResponse({ ok: false, error: 'Tipo de registro invalido.' }, 400);
   }
-  if (kind !== 'measurement_bulk' && (!UUID_PATTERN.test(id) || deleteToken.length < 12)) {
+  if (kind === 'measurement' && (!UUID_PATTERN.test(id) || deleteToken.length < 12)) {
     return jsonResponse({ ok: false, error: 'Identificador de eliminacion invalido.' }, 400);
   }
 
@@ -75,6 +75,20 @@ Deno.serve(async (req) => {
       persistSession: false,
     },
   });
+
+  if (kind === 'survey_bulk') {
+    const admin = await assertAdminRequest(req, supabase);
+    if (!admin.ok) return jsonResponse({ ok: false, error: admin.error }, 403);
+    if (body.category !== undefined && (typeof body.category !== 'string' || !body.category.trim() || body.category.length > 80)) {
+      return jsonResponse({ ok: false, error: 'Categoria invalida.' }, 400);
+    }
+    let query = supabase.from('survey_events').delete({ count: 'exact' }).neq('id', '00000000-0000-0000-0000-000000000000');
+    if (body.category === '__uncategorized') query = query.is('survey_category', null);
+    else if (body.category !== undefined) query = query.eq('survey_category', body.category);
+    const deleted = await query;
+    if (deleted.error) return jsonResponse({ ok: false, error: deleted.error.message }, 500);
+    return jsonResponse({ ok: true, deletedCount: deleted.count ?? 0 });
+  }
 
   if (kind === 'measurement_bulk') {
     const admin = await assertAdminRequest(req, supabase);

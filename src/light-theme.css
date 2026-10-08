@@ -1,0 +1,31 @@
+/* Light counterpart of the navy/cyan palette. Dark styles remain scoped separately. */
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="light"] body{background:#c5d6e5}
+:root[data-theme="light"] .app-shell{background:linear-gradient(160deg,#d4e4ef 0%,var(--bg) 45%,#e8f1f7 100%)}
+:root[data-theme="light"] .app-shell .app-header{background:linear-gradient(120deg,#14263c,#21435e);border-bottom:3px solid #39c9e5;box-shadow:0 5px 18px #14263c26}
+:root[data-theme="light"] .app-shell .header-title{color:#f4faff}
+:root[data-theme="light"] .app-shell .header-subtitle,:root[data-theme="light"] .app-shell .logout-label{color:#d0e4f2}
+:root[data-theme="light"] .app-shell .user-badge .logout-label{color:#344f69}
+:root[data-theme="light"] .app-shell .app-header .theme-toggle,:root[data-theme="light"] .app-shell .app-header .user-badge,:root[data-theme="light"] .app-shell .app-header .btn-back,:root[data-theme="light"] .app-shell .app-header-tool .header-brand-actions>.btn-back{background:#e1f3f9;color:#14334c;border-color:#99c5d5}
+:root[data-theme="light"] .app-shell .card,:root[data-theme="light"] .app-shell .menu-card,:root[data-theme="light"] .app-shell .record-item,:root[data-theme="light"] .app-shell .term-card{background:var(--bg-card);border-color:#9ab3c8;box-shadow:0 5px 15px #17395112}
+:root[data-theme="light"] .app-shell .menu-card{border-left:4px solid #16768e}
+:root[data-theme="light"] .app-shell .menu-card-icon{background:#cceef5;border:1px solid #94cbd8;color:#006780}
+:root[data-theme="light"] .app-shell .menu-card-icon.lifting{background:#d6e5f6;border-color:#9bb6d2;color:#204e7c}
+:root[data-theme="light"] .app-shell .menu-card-icon.procedure{background:#d2ecea;border-color:#95c9c1;color:#17695e}
+:root[data-theme="light"] .app-shell .menu-card-title{color:#14263c}
+:root[data-theme="light"] .app-shell .menu-card-desc{color:#344f69}
+:root[data-theme="light"] .app-shell .btn-save,:root[data-theme="light"] .app-shell .btn-login,:root[data-theme="light"] .app-shell .btn-share-report{background:linear-gradient(110deg,#006780,#087b94);box-shadow:0 4px 10px #00678026}
+:root[data-theme="light"] .app-shell .card-title{color:#005e76;font-size:13px}
+:root[data-theme="light"] .app-shell input[type],:root[data-theme="light"] .app-shell textarea,:root[data-theme="light"] .app-shell .form-group select{border-color:#7898b1;background:#eaf3fa}
+:root[data-theme="light"] .app-shell .weight-output-card{background:linear-gradient(140deg,#d6f0f5,#e5f5fa);border:1px solid #25869d;box-shadow:0 5px 15px #08768e17}
+:root[data-theme="light"] .app-shell .weight-shape-option.selected,:root[data-theme="light"] .app-shell .weight-segment button.active{background:#c9ebf4;border-color:#006780;color:#005a70}
+:root[data-theme="light"] .app-shell .weight-shape-option:not(.selected){background:#e3edf7;border-color:#9ab3c8}
+:root[data-theme="light"] .app-shell .admin-module-nav>button{background:#e4eef7;border-color:#93aec5}
+:root[data-theme="light"] .app-shell .admin-module-nav>button.active{background:#cceef5;border-color:#08778f}
+:root[data-theme="light"] .app-shell th{background:#d5e5f1;color:#173b56;border-color:#9ab3c8}
+:root[data-theme="light"] .app-shell tbody tr:nth-child(even){background:#eef5fa}
+:root[data-theme="light"] .app-shell .procedure-file-picker{background:#e4f2f7;border-color:#5795ad}
+:root[data-theme="light"] .app-shell .login-card{background:#fafdff;border:1px solid #8facbf;box-shadow:0 10px 30px #14263c1c}
+.survey-delete-control{margin:12px 0 18px}
+.survey-delete-control>.danger-button{font-size:13px}
+.survey-delete-control .modal-box{max-height:85dvh;overflow:auto}
